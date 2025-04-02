@@ -6,9 +6,10 @@
 #define ledPin 8          // Existing single-color LED
 
 // Define the GPIO pins for the RGB LED
+// Make sure these pins support PWM if you want to adjust brightness.
 #define rPin 2    // Connect red pin of RGB LED here
-#define gPin 1   // Connect green pin of RGB LED here
-#define bPin 0   // Connect blue pin of RGB LED here
+#define gPin 1    // Connect green pin of RGB LED here
+#define bPin 0    // Connect blue pin of RGB LED here
 
 // Enumeration for the switch modes
 enum SwitchMode {
@@ -63,26 +64,26 @@ void loop() {
       break;
   }
   
-  // Control the RGB LED based on the current mode
-  // For a common cathode RGB LED: HIGH turns the LED on.
+  // Control the RGB LED based on the current mode using PWM values.
+  // For a common cathode RGB LED, analogWrite(255) is full brightness.
   switch (currentMode) {
     case MODE_LEFT:
-      // Red 
-      digitalWrite(rPin, HIGH);
-      digitalWrite(gPin, LOW);
-      digitalWrite(bPin, LOW);
+      // Red color
+      analogWrite(rPin, 255);
+      analogWrite(gPin, 0);
+      analogWrite(bPin, 0);
       break;
     case MODE_NEITHER:
-      // yelow
-      digitalWrite(rPin, HIGH);
-      digitalWrite(gPin, HIGH);
-      digitalWrite(bPin, LOW);
+      // Yellow: full red, reduced green for a warmer tone
+      analogWrite(rPin, 255);
+      analogWrite(gPin, 100);  // Adjust this value to get your desired yellow
+      analogWrite(bPin, 0);
       break;
     case MODE_RIGHT:
-      // green
-      digitalWrite(rPin, LOW);
-      digitalWrite(gPin, HIGH);
-      digitalWrite(bPin, LOW);
+      // Green color
+      analogWrite(rPin, 0);
+      analogWrite(gPin, 255);
+      analogWrite(bPin, 0);
       break;
   }
   
