@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <HardwareSerial.h>
 //----------------------------------------------------
 // Pin Definitions (common pins)
 #define rPin 2   // RGB LED: Red channel
@@ -11,6 +12,7 @@
 #define RF_TX_PIN 21 // RX pin to RF module
 #define RF_RX_PIN 20 // TX pin from RF module
 
-extern HardwareSerial RFSerial;
+// extern HardwareSerial RFSerial;
+#define RFSerial Serial1
 
 void updateRGBLED(char modeChar);

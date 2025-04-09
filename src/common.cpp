@@ -2,7 +2,7 @@
 #include "common.h"
 
 // Use HardwareSerial (Serial1) for the RF module
-HardwareSerial RFSerial(1);
+// HardwareSerial RFSerial(3);
 
 // Function to update the RGB LED based on mode character
 // 'L' = Left (red), 'N' = Neither (yellow), 'R' = Right (green)
