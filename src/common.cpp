@@ -29,7 +29,7 @@ void updateRGBLED(char modeChar)
     // Turn off LED for any unknown value
     analogWrite(rPin, 0);
     analogWrite(gPin, 0);
-    analogWrite(bPin, 0);
+    analogWrite(bPin, 255);
     break;
   }
 }

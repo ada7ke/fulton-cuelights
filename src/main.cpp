@@ -6,13 +6,13 @@
 // Select the role of this device:
 // Uncomment only one of the following lines.
 // You can also set these as build flags in platformio.ini.
-#define CONTROLLER
+//#define CONTROLLER
 
 
 void setup()
 {
   // Start USB Serial for debugging
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(1000);
 
   // Begin RF Serial on Serial1 (UART)

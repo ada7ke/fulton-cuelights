@@ -6,9 +6,9 @@ void setupReceiver()
   pinMode(yellowLED, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
-  digitalWrite(redLED, LOW);
-  digitalWrite(yellowLED, LOW);
-  digitalWrite(greenLED, LOW);
+  analogWrite(redLED, 0);
+  analogWrite(yellowLED, 0);
+  analogWrite(greenLED, 0);
   updateRGBLED('L');
 }
 
@@ -20,19 +20,19 @@ void loopReceiver()
     printf("Read: %c\n", c);
     digitalWrite(ledPin, HIGH); 
     if (c == 'L') {
-      digitalWrite(redLED, HIGH);
-      digitalWrite(yellowLED, LOW);
-      digitalWrite(greenLED, LOW);
+      analogWrite(redLED, 20);
+      analogWrite(yellowLED, 0);
+      analogWrite(greenLED, 0);
     }
     else if (c == 'N') {
-      digitalWrite(redLED, LOW);
-      digitalWrite(yellowLED, HIGH);
-      digitalWrite(greenLED, LOW);
+      analogWrite(redLED, 0);
+      analogWrite(yellowLED, 20);
+      analogWrite(greenLED, 0);
     }
     else if (c == 'R') {
-      digitalWrite(redLED, LOW);
-      digitalWrite(yellowLED, LOW);
-      digitalWrite(greenLED, HIGH);
+      analogWrite(redLED, 0);
+      analogWrite(yellowLED, 0);
+      analogWrite(greenLED, 20);
     }
       
     updateRGBLED(c);
