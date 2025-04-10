@@ -2,13 +2,32 @@
 #include "receiver.h"
 #include "controller.h"
 #include "common.h"
+
 //----------------------------------------------------
-// Select the role of this device:
-// Uncomment only one of the following lines.
-// You can also set these as build flags in platformio.ini.
-//#define CONTROLLER
+// Define the role detection pin
+#define ROLE_DETECT_PIN 5
 
+enum DeviceRole {
+  ROLE_CONTROLLER,
+  ROLE_RECEIVER
+};
 
+DeviceRole deviceRole;
+
+//----------------------------------------------------
+// Function to auto-detect the role using GPIO5
+DeviceRole autoDetectRole() {
+  pinMode(ROLE_DETECT_PIN, INPUT_PULLUP);
+  delay(10);  // Let the pull-up settle
+
+  if (digitalRead(ROLE_DETECT_PIN) == LOW) {
+    return ROLE_CONTROLLER;
+  } else {
+    return ROLE_RECEIVER;
+  }
+}
+
+//----------------------------------------------------
 void setup()
 {
   // Start USB Serial for debugging
@@ -25,19 +44,23 @@ void setup()
   // Set up additional LED pin
   pinMode(ledPin, OUTPUT);
 
-#ifdef CONTROLLER
-  setupController();
-#else
-  setupReceiver();
-#endif
+  // Detect the role based on GPIO5
+  deviceRole = autoDetectRole();
+  if (deviceRole == ROLE_CONTROLLER) {
+    Serial.println("Auto detected role: CONTROLLER");
+    setupController();
+  } else {
+    Serial.println("Auto detected role: RECEIVER");
+    setupReceiver();
+  }
 }
 
 //----------------------------------------------------
 void loop()
 {
-#ifdef CONTROLLER
-  loopController();
-#else
-  loopReceiver();
-#endif
+  if (deviceRole == ROLE_CONTROLLER) {
+    loopController();
+  } else {
+    loopReceiver();
+  }
 }
