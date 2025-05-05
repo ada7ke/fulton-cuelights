@@ -2,8 +2,8 @@
 #include "controller.h"
 #include "common.h"
 
-SwitchMode currentMode = MODE_RED;
-SwitchMode lastMode = MODE_RED;
+SwitchMode currentMode = MODE_EMPTY;
+SwitchMode lastMode = MODE_EMPTY;
 
 void setupController() {
   // Set up switch pins with internal pull-ups
@@ -36,27 +36,41 @@ void loopController() {
     char modeChar;
     switch (currentMode)
     {
-    case MODE_RED:
-      modeChar = 'L';
-      break;
-    case MODE_YELLOW:
-      modeChar = 'N';
-      break;
-    case MODE_GREEN:
-      modeChar = 'R';
-      break;
+      case MODE_YELLOW:
+        modeChar = 'Y';
+        break;
+      case MODE_GREEN:
+        modeChar = 'G';
+        break;
     }
 
     // Update the RGB LED locally
     updateRGBLED(modeChar);
-    // Send the mode over RF
-    RFSerial.write(modeChar);
+    digitalWrite(ledPin, LOW);
+    sendCommand(modeChar);
     // Debug output
     printf("Controller mode: %c\n", modeChar);
-    digitalWrite(ledPin, LOW);
     delay(100);
-    
   }
+
+  while (RFSerial.available()) {
+    char c = RFSerial.read();
+    if (c == 'X') {
+      updateRGBLED(c);
+      lastMode = MODE_EMPTY;
+      currentMode = MODE_EMPTY;
+    }
+  }
+
   digitalWrite(ledPin, HIGH);
   delay(100); // Short delay for debouncing and to reduce serial output spam
+}
+
+void sendCommand(char modeChar) {
+  // Send the mode over RF
+  char checksum = modeChar ^ 0xAA;
+  RFSerial.write(0x7E);
+  RFSerial.write(modeChar);
+  RFSerial.write(checksum);
+  RFSerial.write(0x7F);
 }

@@ -10,21 +10,25 @@ void updateRGBLED(char modeChar)
 {
   switch (modeChar)
   {
-  case 'L':
+  case 'R':
     analogWrite(rPin, 255);
     analogWrite(gPin, 0);
     analogWrite(bPin, 0);
     break;
-  case 'N':
+  case 'Y':
     analogWrite(rPin, 255);
     analogWrite(gPin, 150); // Adjust this value for a warmer yellow tone
     analogWrite(bPin, 0);
     break;
-  case 'R':
+  case 'G':
     analogWrite(rPin, 0);
     analogWrite(gPin, 255);
     analogWrite(bPin, 0);
     break;
+  case 'X':
+    analogWrite(rPin, 0);
+    analogWrite(gPin, 0);
+    analogWrite(bPin, 255);
   default:
     // Turn off LED for any unknown value
     analogWrite(rPin, 0);

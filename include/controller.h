@@ -5,10 +5,11 @@
 
 enum SwitchMode
 {
-  MODE_RED,
+  MODE_EMPTY,
   MODE_YELLOW,
   MODE_GREEN
 };
 
 void setupController();
 void loopController();
+void sendCommand(char);
