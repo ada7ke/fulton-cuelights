@@ -1,13 +1,13 @@
 #pragma once
 
-#define leftSwitchPin 3  // Connect left switch here
-#define rightSwitchPin 4 // Connect right switch here
+#define yellowbuttonPin 3  // Connect left switch here
+#define greenbuttonPin 4 // Connect right switch here
 
 enum SwitchMode
 {
-  MODE_LEFT,
-  MODE_NEITHER,
-  MODE_RIGHT
+  MODE_RED,
+  MODE_YELLOW,
+  MODE_GREEN
 };
 
 void setupController();

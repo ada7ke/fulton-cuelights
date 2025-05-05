@@ -2,13 +2,13 @@
 #include "controller.h"
 #include "common.h"
 
-SwitchMode currentMode = MODE_NEITHER;
-SwitchMode lastMode = MODE_NEITHER;
+SwitchMode currentMode = MODE_RED;
+SwitchMode lastMode = MODE_RED;
 
 void setupController() {
   // Set up switch pins with internal pull-ups
-  pinMode(leftSwitchPin, INPUT_PULLUP);
-  pinMode(rightSwitchPin, INPUT_PULLUP);
+  pinMode(yellowbuttonPin, INPUT_PULLUP);
+  pinMode(greenbuttonPin, INPUT_PULLUP);
   
   // Initialize LED to a default state (yellow for MODE_NEITHER)
   digitalWrite(ledPin, HIGH);
@@ -17,23 +17,16 @@ void setupController() {
 void loopController() {
     // --- Controller (Sender) Code ---
   // Read switch states (LOW means pressed due to pull-ups)
-  bool leftPressed = (digitalRead(leftSwitchPin) == LOW);
-  bool rightPressed = (digitalRead(rightSwitchPin) == LOW);
+  bool yellowbuttonPressed = (digitalRead(yellowbuttonPin) == LOW);
+  bool greenbuttonPressed = (digitalRead(greenbuttonPin) == LOW);
 
   digitalWrite(ledPin, HIGH);
 
-  // Determine mode based on switch states
-  if (leftPressed && !rightPressed)
-  {
-    currentMode = MODE_LEFT;
+  if (greenbuttonPressed) {
+    currentMode = MODE_GREEN;
   }
-  else if (!leftPressed && rightPressed)
-  {
-    currentMode = MODE_RIGHT;
-  }
-  else if (!leftPressed && !rightPressed)
-  {
-    currentMode = MODE_NEITHER;
+  else if (yellowbuttonPressed) {
+    currentMode = MODE_YELLOW;
   }
 
   // Update only if the mode has changed
@@ -43,13 +36,13 @@ void loopController() {
     char modeChar;
     switch (currentMode)
     {
-    case MODE_LEFT:
+    case MODE_RED:
       modeChar = 'L';
       break;
-    case MODE_NEITHER:
+    case MODE_YELLOW:
       modeChar = 'N';
       break;
-    case MODE_RIGHT:
+    case MODE_GREEN:
       modeChar = 'R';
       break;
     }
