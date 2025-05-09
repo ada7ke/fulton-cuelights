@@ -1,8 +1,7 @@
 #include "receiver.h"
 #include "common.h"
 
-State state = WAIT_START;
-int timer = 0;
+static State state = WAIT_START;
 
 void setupReceiver()
 {
@@ -12,28 +11,18 @@ void setupReceiver()
   analogWrite(redLED, 0);
   analogWrite(yellowLED, 0);
   analogWrite(greenLED, 0);
-  updateRGBLED('L');
+  updateRGBLED('X');
 }
 
 void loopReceiver()
 {
-  char modeChar;
-  char recievedChecksum;
-
-  digitalWrite(ledPin, LOW);
-
-  // sleep timer
-  if (timer >= 60000) {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
-    printf("timer: %i \n", timer);
-  }
+  static char mode;
+  static char recievedChecksum;
 
   while (RFSerial.available()) {
     char c = RFSerial.read();
     printf("Read: %c\n", c);
-    digitalWrite(ledPin, HIGH);
+    digitalWrite(ledPin, LOW);
 
     switch (state) {
       case WAIT_START:
@@ -43,7 +32,7 @@ void loopReceiver()
         break;
 
       case READ_MODE:
-        modeChar = c;
+        mode = c;
         state = READ_CHECKSUM;
         break;
 
@@ -54,42 +43,36 @@ void loopReceiver()
 
       case WAIT_END:
         if (c == 0x7F) {
-          char expectedChecksum = modeChar ^ 0xAA;
+          char expectedChecksum = mode ^ 0xAA;
           if (recievedChecksum == expectedChecksum) {
-            Serial.print("Command: ");
-            Serial.println(modeChar);
-            updateRGBLED(modeChar);
-            updateLEDs(c);
-          }
-          else {
-            RFSerial.write('X');
-            updateRGBLED('X');
+            printf("Command: %c\n", mode);
+            updateRGBLED(mode);
+            updateLEDs(mode);
           }
           state = WAIT_START;
-          timer = 0;
         }
     }
     delay(10);
   } 
   
-  timer += 0.1;
+  digitalWrite(ledPin, HIGH);
   delay(100);
 }
 
 void updateLEDs(char c) {
-  if (c == 'L') {
-    analogWrite(redLED, 20);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
-  }
-  else if (c == 'N') {
+  if (c == 'Y') {
     analogWrite(redLED, 0);
     analogWrite(yellowLED, 20);
     analogWrite(greenLED, 0);
   }
-  else if (c == 'R') {
+  else if (c == 'G') {
     analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 20);
+  }
+  else if (c == 'X') {
+    analogWrite(redLED, 0);
+    analogWrite(yellowLED, 0);
+    analogWrite(greenLED, 0);
   }
 }

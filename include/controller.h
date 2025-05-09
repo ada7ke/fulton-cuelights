@@ -1,15 +1,17 @@
 #pragma once
 
-#define yellowbuttonPin 3  // Connect left switch here
-#define greenbuttonPin 4 // Connect right switch here
+#define yButtonPin 3  // Connect left switch here
+#define gButtonPin 4 // Connect right switch here
 
 enum SwitchMode
 {
-  MODE_EMPTY,
-  MODE_YELLOW,
-  MODE_GREEN
+  EMPTY,
+  YELLOW,
+  GREEN,
 };
 
 void setupController();
 void loopController();
-void sendCommand(char);
+void detectButtonChange();
+void sendCurrentMode(char mode);
+void sendCommand(char mode);

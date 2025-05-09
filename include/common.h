@@ -15,4 +15,4 @@
 // extern HardwareSerial RFSerial;
 #define RFSerial Serial1
 
-void updateRGBLED(char modeChar);
+void updateRGBLED(char mode);
