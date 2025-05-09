@@ -43,12 +43,18 @@ void loopReceiver()
 
       case WAIT_END:
         if (c == 0x7F) {
-          char expectedChecksum = mode ^ 0xAA;
-          if (recievedChecksum == expectedChecksum) {
+          uint8_t data[1] = { static_cast<uint8_t>(mode) };
+          uint8_t expectedCRC = crc8(data, 1);  // use your CRC-8 function
+
+          if (static_cast<uint8_t>(recievedChecksum) == expectedCRC) {
             printf("Command: %c\n", mode);
             updateRGBLED(mode);
             updateLEDs(mode);
           }
+          else {
+            updateRGBLED('F');
+          }
+
           state = WAIT_START;
         }
     }

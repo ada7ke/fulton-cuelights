@@ -20,6 +20,26 @@ void setupController() {
   digitalWrite(ledPin, HIGH);
 }
 
+void loopController() {
+  // --- Controller (Sender) Code ---
+detectButtonChange();
+sendCurrentMode(mode);
+
+if (millis() > ledOnTime) {
+  digitalWrite(ledPin, HIGH);
+}
+
+if (sleepTimer >= 10) {
+  mode = 'X';
+  updateRGBLED(mode);
+  lastMode = EMPTY;
+  currentMode = EMPTY;
+}
+
+sleepTimer += 0.1f;
+delay(100); // Short delay for debouncing and to reduce serial output spam
+}
+
 void detectButtonChange() {
   // Read switch states (LOW means pressed due to pull-ups)
   bool yellowbuttonPressed = (digitalRead(yButtonPin) == LOW);
@@ -62,33 +82,14 @@ void sendCommand(char mode) {
   digitalWrite(ledPin, LOW);
 
   // Send the mode over RF
-  char checksum = mode ^ 0xAA;
+  uint8_t buffer[1] = { static_cast<uint8_t>(mode) };
+  uint8_t crc = crc8(buffer, 1);
+
   RFSerial.write(0x7E);
   RFSerial.write(mode);
-  RFSerial.write(checksum);
+  RFSerial.write(crc);
   RFSerial.write(0x7F);
 
   printf("Sent mode: %c\n", mode);
   ledOnTime = millis() + 50;
 }
-
-void loopController() {
-    // --- Controller (Sender) Code ---
-  detectButtonChange();
-  sendCurrentMode(mode);
-
-  if (millis() > ledOnTime) {
-    digitalWrite(ledPin, HIGH);
-  }
-
-  if (sleepTimer >= 10) {
-    mode = 'X';
-    updateRGBLED(mode);
-    lastMode = EMPTY;
-    currentMode = EMPTY;
-  }
-  
-  sleepTimer += 0.1f;
-  delay(100); // Short delay for debouncing and to reduce serial output spam
-}
-
