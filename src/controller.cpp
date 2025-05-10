@@ -57,11 +57,15 @@ void detectButtonChange() {
     lastMode = currentMode;
     mode = (currentMode == GREEN) ? 'G' : 'Y';
     // Update the RGB LED locally
-    updateRGBLED(mode);
     sendCommand(mode);
     // Debug output
     printf("Controller mode: %c\n", mode);
     sleepTimer = 0;
+  }
+
+  while (RFSerial.available()) {
+    mode = RFSerial.read();
+    updateRGBLED(mode);
   }
 }
 

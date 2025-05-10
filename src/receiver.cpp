@@ -52,8 +52,11 @@ void loopReceiver()
             updateLEDs(mode);
           }
           else {
-            updateRGBLED('F');
+            mode = 'Z';
+            updateRGBLED(mode);
           }
+
+          RFSerial.write(mode);
 
           state = WAIT_START;
         }
