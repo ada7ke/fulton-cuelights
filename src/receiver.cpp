@@ -12,13 +12,14 @@ void setupReceiver()
   analogWrite(yellowLED, 0);
   analogWrite(greenLED, 0);
   updateRGBLED('X');
+  digitalWrite(ledPin, HIGH);
 }
 
 void loopReceiver()
 {
   static char mode;
   static char recievedChecksum;
-
+  
   while (RFSerial.available()) {
     char c = RFSerial.read();
     printf("Read: %c\n", c);

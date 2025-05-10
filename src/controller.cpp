@@ -21,23 +21,28 @@ void setupController() {
 }
 
 void loopController() {
-  // --- Controller (Sender) Code ---
-detectButtonChange();
-sendCurrentMode(mode);
+    // --- Controller (Sender) Code ---
+  detectButtonChange();
+  sendCurrentMode(mode);
 
-if (millis() > ledOnTime) {
-  digitalWrite(ledPin, HIGH);
-}
+  if (millis() > ledOnTime) {
+    digitalWrite(ledPin, HIGH);
+  }
 
-if (sleepTimer >= 10) {
-  mode = 'X';
-  updateRGBLED(mode);
-  lastMode = EMPTY;
-  currentMode = EMPTY;
-}
+  if (sleepTimer >= 10) {
+    mode = 'X';
+    updateRGBLED(mode);
+    lastMode = EMPTY;
+    currentMode = EMPTY;
+  }
 
-sleepTimer += 0.1f;
-delay(100); // Short delay for debouncing and to reduce serial output spam
+  while (RFSerial.available()) {
+    mode = RFSerial.read();
+    updateRGBLED(mode);
+  }
+
+  sleepTimer += 0.1f;
+  delay(100); // Short delay for debouncing and to reduce serial output spam
 }
 
 void detectButtonChange() {
@@ -61,11 +66,6 @@ void detectButtonChange() {
     // Debug output
     printf("Controller mode: %c\n", mode);
     sleepTimer = 0;
-  }
-
-  while (RFSerial.available()) {
-    mode = RFSerial.read();
-    updateRGBLED(mode);
   }
 }
 
