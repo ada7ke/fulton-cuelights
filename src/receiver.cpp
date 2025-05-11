@@ -8,10 +8,8 @@ void setupReceiver()
   pinMode(yellowLED, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
-  analogWrite(redLED, 0);
-  analogWrite(yellowLED, 0);
-  analogWrite(greenLED, 0);
-  updateRGBLED('X');
+
+  updateLEDs('X');
   digitalWrite(ledPin, HIGH);
 }
 
@@ -19,7 +17,7 @@ void loopReceiver()
 {
   static char mode;
   static char recievedChecksum;
-  
+
   while (RFSerial.available()) {
     char c = RFSerial.read();
     printf("Read: %c\n", c);
@@ -49,12 +47,10 @@ void loopReceiver()
 
           if (static_cast<uint8_t>(recievedChecksum) == expectedCRC) {
             printf("Command: %c\n", mode);
-            updateRGBLED(mode);
             updateLEDs(mode);
           }
           else {
             mode = 'Z';
-            updateRGBLED(mode);
           }
 
           RFSerial.write(mode);
@@ -64,7 +60,7 @@ void loopReceiver()
     }
     delay(10);
   } 
-  
+
   digitalWrite(ledPin, HIGH);
   delay(100);
 }
