@@ -6,7 +6,6 @@ static State state = WAIT_START;
 void setupReceiver()
 {
   pinMode(yellowLED, OUTPUT);
-  pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
 
   updateLEDs('X');
@@ -67,17 +66,14 @@ void loopReceiver()
 
 void updateLEDs(char c) {
   if (c == 'Y') {
-    analogWrite(redLED, 0);
     analogWrite(yellowLED, 20);
     analogWrite(greenLED, 0);
   }
   else if (c == 'G') {
-    analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 20);
   }
   else if (c == 'X') {
-    analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 0);
   }

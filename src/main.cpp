@@ -34,9 +34,6 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
-  // Begin RF Serial on Serial1 (UART)
-  RFSerial.begin(9600, SERIAL_8N1, RF_RX_PIN, RF_TX_PIN);
-
   // Set up RGB LED pins
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
@@ -47,9 +44,12 @@ void setup()
   // Detect the role based on GPIO5
   deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
+    // Begin RF Serial on Serial1 (UART)
+    RFSerial.begin(9600, SERIAL_8N1, 20, 21);
     Serial.println("Auto detected role: CONTROLLER");
     setupController();
   } else {
+    RFSerial.begin(9600, SERIAL_8N1, 21, 20);
     Serial.println("Auto detected role: RECEIVER");
     setupReceiver();
   }

@@ -1,8 +1,8 @@
 #pragma once
 
-#define redLED 7
-#define yellowLED 6
-#define greenLED 10
+#define yellowLED 7
+#define greenLED 9
+
 
 enum State
 {

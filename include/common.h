@@ -8,9 +8,6 @@
 #define bPin 0   // RGB LED: Blue channel
 #define ledPin 8 // Additional single-color LED
 
-// RF module UART pins (make sure these pins support UART on your ESP32-C3)
-#define RF_TX_PIN 21 // RX pin to RF module
-#define RF_RX_PIN 20 // TX pin from RF module
 
 // extern HardwareSerial RFSerial;
 #define RFSerial Serial1
