@@ -50,20 +50,19 @@ void detectButtonChange() {
   bool gButtonPressed = (digitalRead(gButtonPin) == LOW);
 
   if (rButtonPressed) {
-    currentMode = RED;
+    currentMode = R;
   }
   else if (gButtonPressed) {
-    currentMode = GREEN;
+    currentMode = G;
   }
   else if (yButtonPressed) {
-    currentMode = YELLOW;
+    currentMode = Y;
   }
 
   if (currentMode != lastMode) {
     lastMode = currentMode;
-    mode = (currentMode == GREEN) ? 'G' : 'Y';
-    sendCommand(mode);
-    printf("Controller mode: %c\n", mode);
+    sendCommand(currentMode);
+    printf("Controller mode: %c\n", currentMode);
     sleepTimer = 0;
   }
 }

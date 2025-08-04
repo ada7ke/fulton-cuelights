@@ -7,9 +7,9 @@
 enum SwitchMode
 {
   EMPTY,
-  RED,
-  YELLOW,
-  GREEN,
+  R,
+  Y,
+  G,
 };
 
 void setupController();
