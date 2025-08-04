@@ -12,16 +12,15 @@ static unsigned long ledOnTime = 0;
 void setupController() {
   randomSeed(micros());
 
-  // Set up switch pins with internal pull-ups
+  pinMode(rButtonPin, INPUT_PULLUP);
   pinMode(yButtonPin, INPUT_PULLUP);
   pinMode(gButtonPin, INPUT_PULLUP);
-  // Initialize LED to a default state (yellow for MODE_NEITHER)
+
   updateRGBLED('X');
   digitalWrite(ledPin, HIGH);
 }
 
 void loopController() {
-    // --- Controller (Sender) Code ---
   detectButtonChange();
   sendCurrentMode(mode);
 
@@ -42,28 +41,28 @@ void loopController() {
   }
 
   sleepTimer += 0.1f;
-  delay(100); // Short delay for debouncing and to reduce serial output spam
+  delay(100);
 }
 
 void detectButtonChange() {
-  // Read switch states (LOW means pressed due to pull-ups)
-  bool yellowbuttonPressed = (digitalRead(yButtonPin) == LOW);
-  bool greenbuttonPressed = (digitalRead(gButtonPin) == LOW);
+  bool rButtonPressed = (digitalRead(rButtonPin) == LOW);
+  bool yButtonPressed = (digitalRead(yButtonPin) == LOW);
+  bool gButtonPressed = (digitalRead(gButtonPin) == LOW);
 
-  if (greenbuttonPressed) {
+  if (rButtonPressed) {
+    currentMode = RED;
+  }
+  else if (gButtonPressed) {
     currentMode = GREEN;
   }
-  else if (yellowbuttonPressed) {
+  else if (yButtonPressed) {
     currentMode = YELLOW;
   }
 
-  // Update only if the mode has changed
   if (currentMode != lastMode) {
     lastMode = currentMode;
     mode = (currentMode == GREEN) ? 'G' : 'Y';
-    // Update the RGB LED locally
     sendCommand(mode);
-    // Debug output
     printf("Controller mode: %c\n", mode);
     sleepTimer = 0;
   }
@@ -85,7 +84,6 @@ void sendCurrentMode(char mode) {
 void sendCommand(char mode) {
   digitalWrite(ledPin, LOW);
 
-  // Send the mode over RF
   uint8_t buffer[1] = { static_cast<uint8_t>(mode) };
   uint8_t crc = crc8(buffer, 1);
 

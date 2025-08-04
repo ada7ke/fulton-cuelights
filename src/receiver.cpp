@@ -5,6 +5,7 @@ static State state = WAIT_START;
 
 void setupReceiver()
 {
+  pinMode(redLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
 
@@ -42,7 +43,7 @@ void loopReceiver()
       case WAIT_END:
         if (c == 0x7F) {
           uint8_t data[1] = { static_cast<uint8_t>(mode) };
-          uint8_t expectedCRC = crc8(data, 1);  // use your CRC-8 function
+          uint8_t expectedCRC = crc8(data, 1); 
 
           if (static_cast<uint8_t>(recievedChecksum) == expectedCRC) {
             printf("Command: %c\n", mode);
@@ -65,15 +66,23 @@ void loopReceiver()
 }
 
 void updateLEDs(char c) {
-  if (c == 'Y') {
+  if (c == 'R') {
+    analogWrite(redLED, 20);
+    analogWrite(yellowLED, 0);
+    analogWrite(greenLED, 0);
+  }
+  else if (c == 'Y') {
+    analogWrite(redLED, 0);
     analogWrite(yellowLED, 20);
     analogWrite(greenLED, 0);
   }
   else if (c == 'G') {
+    analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 20);
   }
   else if (c == 'X') {
+    analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 0);
   }

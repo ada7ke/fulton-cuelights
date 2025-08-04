@@ -1,11 +1,13 @@
 #pragma once
 
-#define yButtonPin 3  // Connect left switch here
-#define gButtonPin 4 // Connect right switch 
+#define rButtonPin 6
+#define yButtonPin 3
+#define gButtonPin 4
 
 enum SwitchMode
 {
   EMPTY,
+  RED,
   YELLOW,
   GREEN,
 };
