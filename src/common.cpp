@@ -5,6 +5,10 @@ void updateRGBLED(char mode)
 {
   switch (mode)
   {
+    case 'R':
+      analogWrite(rPin, 255);
+      analogWrite(gPin, 0);
+      analogWrite(bPin, 0);
     case 'G':
       analogWrite(rPin, 0);
       analogWrite(gPin, 255);
