@@ -40,7 +40,7 @@ void setup()
     Serial.println("Auto detected role: CONTROLLER");
     setupController();
   } else {
-    RFSerial.begin(9600, SERIAL_8N1, 21, 20);
+    RFSerial.begin(9600, SERIAL_8N1, 21, 20); 
     Serial.println("Auto detected role: RECEIVER");
     setupReceiver();
   }

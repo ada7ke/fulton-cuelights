@@ -26,8 +26,8 @@ void setupController() {
 void loopController() {
   detectButtonChange();
   sendCurrentMode(currentMode);
-  printf("lastMode: %c, currentMode: %c\n", static_cast<char>(lastMode), static_cast<char>(currentMode));
-  printf("sleepTimer: %.3f\n", sleepTimer);
+  // printf("lastMode: %c, currentMode: %c\n", static_cast<char>(lastMode), static_cast<char>(currentMode));
+  // printf("sleepTimer: %.3f\n", sleepTimer);
 
   if (millis() > ledOnTime) {
     digitalWrite(ledPin, HIGH);
@@ -103,5 +103,6 @@ void sendCommand(Mode mode) {
   RFSerial.write(0x7F);
 
   printf("Sent mode: %c\n", static_cast<char>(mode));
+  // printf("CRC: 0x%02X\n", crc);
   ledOnTime = millis() + 50;
 }

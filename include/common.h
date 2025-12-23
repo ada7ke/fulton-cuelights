@@ -8,6 +8,8 @@
 #define ledPin 8
 
 #define RFSerial Serial1
+#define RX_PIN 21
+#define TX_PIN 20
 
 enum class Mode : uint8_t
 {

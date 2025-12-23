@@ -17,6 +17,7 @@ void loopReceiver()
 {
   static uint8_t modeByte;
   static uint8_t recievedChecksum;
+  // printf("Waiting for data...\n");
 
   while (RFSerial.available()) {
     uint8_t byteIn = RFSerial.read();
