@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 
 #define rButtonPin 6
 #define yButtonPin 3

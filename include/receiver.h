@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 
 #define redLED 6
 #define yellowLED 7
@@ -14,4 +15,4 @@ enum State
 
 void setupReceiver();
 void loopReceiver();
-void updateLEDs(char);
+void updateLEDs(Mode mode);

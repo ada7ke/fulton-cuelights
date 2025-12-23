@@ -1,25 +1,25 @@
 #include <Arduino.h>
 #include "common.h"
 
-void updateRGBLED(char mode)
+void updateRGBLED(Mode mode)
 {
   switch (mode)
   {
-    case 'R':
+    case Mode::R:
       analogWrite(rPin, 255);
       analogWrite(gPin, 0);
       analogWrite(bPin, 0);
-    case 'G':
+    case Mode::G:
       analogWrite(rPin, 0);
       analogWrite(gPin, 255);
       analogWrite(bPin, 0);
       break;
-    case 'Y':
+    case Mode::Y:
       analogWrite(rPin, 255);
       analogWrite(gPin, 100);
       analogWrite(bPin, 0);
       break;
-    case 'X':
+    case Mode::X:
       analogWrite(rPin, 0);
       analogWrite(gPin, 0);
       analogWrite(bPin, 0);
