@@ -34,8 +34,8 @@ void setup()
   pinMode(ledPin, OUTPUT);
 
   deviceRole = autoDetectRole();
+  // Begin RF Serial on Serial1 (UART)
   if (deviceRole == ROLE_CONTROLLER) {
-    // Begin RF Serial on Serial1 (UART)
     RFSerial.begin(9600, SERIAL_8N1, 20, 21);
     Serial.println("Auto detected role: CONTROLLER");
     setupController();

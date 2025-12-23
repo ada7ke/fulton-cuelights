@@ -9,5 +9,13 @@
 
 #define RFSerial Serial1
 
-void updateRGBLED(char mode);
+enum class Mode : uint8_t
+{
+  X = 'X',
+  R = 'R',
+  Y = 'Y',
+  G = 'G',
+};
+
+void updateRGBLED(Mode mode);
 uint8_t crc8(const uint8_t* data, size_t len);

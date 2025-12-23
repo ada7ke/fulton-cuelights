@@ -9,54 +9,58 @@ void setupReceiver()
   pinMode(yellowLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
 
-  updateLEDs('X');
+  updateLEDs(Mode::X);
   digitalWrite(ledPin, HIGH);
 }
 
 void loopReceiver()
 {
-  static char mode;
-  static char recievedChecksum;
+  static uint8_t modeByte;
+  static uint8_t recievedChecksum;
 
   while (RFSerial.available()) {
-    char c = RFSerial.read();
-    printf("Read: %c\n", c);
+    uint8_t byteIn = RFSerial.read();
+    printf("Read: 0x%02X\n", byteIn);
     digitalWrite(ledPin, LOW);
+    Mode mode;
 
     switch (state) {
       case WAIT_START:
-        if (c == 0x7E) {
+        if (byteIn == 0x7E) {
           state = READ_MODE;
         }
         break;
 
       case READ_MODE:
-        mode = c;
+        modeByte = byteIn;
         state = READ_CHECKSUM;
         break;
 
       case READ_CHECKSUM:
-        recievedChecksum = c;
+        recievedChecksum = byteIn;
         state = WAIT_END;
         break;
 
       case WAIT_END:
-        if (c == 0x7F) {
-          uint8_t data[1] = { static_cast<uint8_t>(mode) };
+        if (byteIn == 0x7F) {
+          uint8_t data[1] = { modeByte };
           uint8_t expectedCRC = crc8(data, 1); 
 
-          if (static_cast<uint8_t>(recievedChecksum) == expectedCRC) {
-            printf("Command: %c\n", mode);
+          if (recievedChecksum == expectedCRC &&
+             (modeByte == 'R' || modeByte == 'Y' ||
+              modeByte == 'G' || modeByte == 'X')) {
+            
+            mode = static_cast<Mode>(modeByte);
+            printf("Command: %c\n", static_cast<char>(mode));
             updateLEDs(mode);
-          }
-          else {
-            mode = 'Z';
-          }
 
-          RFSerial.write(mode);
-
-          state = WAIT_START;
+            RFSerial.write(modeByte);
+          }
+        else {
+          mode = Mode::X;
         }
+        state = WAIT_START;
+      }
     }
     delay(10);
   } 
@@ -65,23 +69,23 @@ void loopReceiver()
   delay(100);
 }
 
-void updateLEDs(char c) {
-  if (c == 'R') {
+void updateLEDs(Mode mode) {
+  if (mode == Mode::R) {
     analogWrite(redLED, 20);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 0);
   }
-  else if (c == 'Y') {
+  else if (mode == Mode::Y) {
     analogWrite(redLED, 0);
     analogWrite(yellowLED, 20);
     analogWrite(greenLED, 0);
   }
-  else if (c == 'G') {
+  else if (mode == Mode::G) {
     analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 20);
   }
-  else if (c == 'X') {
+  else if (mode == Mode::X) {
     analogWrite(redLED, 0);
     analogWrite(yellowLED, 0);
     analogWrite(greenLED, 0);

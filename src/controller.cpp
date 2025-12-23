@@ -2,12 +2,13 @@
 #include "controller.h"
 #include "common.h"
 
-SwitchMode currentMode = EMPTY;
-SwitchMode lastMode = EMPTY;
-char mode;
+Mode currentMode = Mode::X;
+Mode lastMode = Mode::X;
 
-float sleepTimer = 0.000f;
+float sleepTimer;
 static unsigned long ledOnTime = 0;
+static unsigned long lastSend = 0;
+static unsigned long interval = 1000;
 
 void setupController() {
   randomSeed(micros());
@@ -16,28 +17,41 @@ void setupController() {
   pinMode(yButtonPin, INPUT_PULLUP);
   pinMode(gButtonPin, INPUT_PULLUP);
 
-  updateRGBLED('X');
+  updateRGBLED(currentMode);
   digitalWrite(ledPin, HIGH);
+
+  sleepTimer = 0.0f;
 }
 
 void loopController() {
   detectButtonChange();
-  sendCurrentMode(mode);
+  sendCurrentMode(currentMode);
+  printf("lastMode: %c, currentMode: %c\n", static_cast<char>(lastMode), static_cast<char>(currentMode));
+  printf("sleepTimer: %.3f\n", sleepTimer);
 
   if (millis() > ledOnTime) {
     digitalWrite(ledPin, HIGH);
   }
 
-  if (sleepTimer >= 10) {
-    mode = 'X';
-    updateRGBLED(mode);
-    lastMode = EMPTY;
-    currentMode = EMPTY;
+  if (sleepTimer >= 15.0f) {
+    currentMode = Mode::X;
+    updateRGBLED(currentMode);
+    lastMode = Mode::X;
+    currentMode = Mode::X;
   }
 
   while (RFSerial.available()) {
-    mode = RFSerial.read();
-    updateRGBLED(mode);
+    uint8_t raw = RFSerial.read();
+    switch(raw) {
+      case 'X':
+      case 'R':
+      case 'Y':
+      case 'G':
+        updateRGBLED(static_cast<Mode>(raw));
+        break;
+      default:
+        break;
+    }
   }
 
   sleepTimer += 0.1f;
@@ -50,47 +64,44 @@ void detectButtonChange() {
   bool gButtonPressed = (digitalRead(gButtonPin) == LOW);
 
   if (rButtonPressed) {
-    currentMode = R;
+    currentMode = Mode::R;
   }
   else if (gButtonPressed) {
-    currentMode = G;
+    currentMode = Mode::G;
   }
   else if (yButtonPressed) {
-    currentMode = Y;
+    currentMode = Mode::Y;
   }
 
   if (currentMode != lastMode) {
     lastMode = currentMode;
     sendCommand(currentMode);
-    printf("Controller mode: %c\n", currentMode);
-    sleepTimer = 0;
+    printf("Controller mode: %c\n", static_cast<char>(currentMode));
+    sleepTimer = 0.0f;
   }
 }
 
-void sendCurrentMode(char mode) {
-  static unsigned long lastSend = 0;
-  static unsigned long interval = 500;
+void sendCurrentMode(Mode mode) {
   unsigned long now = millis();
 
   if (now - lastSend >= interval) {
     lastSend = now;
     sendCommand(mode);
+    interval = 1000 + random(-50, 51);
   }
-
-  interval = 500 + random(-50, 51);
 }
 
-void sendCommand(char mode) {
+void sendCommand(Mode mode) {
   digitalWrite(ledPin, LOW);
 
-  uint8_t buffer[1] = { static_cast<uint8_t>(mode) };
-  uint8_t crc = crc8(buffer, 1);
+  uint8_t payload[1] = { static_cast<uint8_t>(mode) };
+  uint8_t crc = crc8(payload, 1);
 
   RFSerial.write(0x7E);
-  RFSerial.write(mode);
+  RFSerial.write(payload[0]);
   RFSerial.write(crc);
   RFSerial.write(0x7F);
 
-  printf("Sent mode: %c\n", mode);
+  printf("Sent mode: %c\n", static_cast<char>(mode));
   ledOnTime = millis() + 50;
 }

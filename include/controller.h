@@ -4,16 +4,8 @@
 #define yButtonPin 3
 #define gButtonPin 4
 
-enum SwitchMode
-{
-  EMPTY,
-  R,
-  Y,
-  G,
-};
-
 void setupController();
 void loopController();
 void detectButtonChange();
-void sendCurrentMode(char mode);
-void sendCommand(char mode);
+void sendCurrentMode(Mode mode);
+void sendCommand(Mode mode);
