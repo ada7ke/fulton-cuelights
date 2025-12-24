@@ -35,9 +35,9 @@ void loopController() {
 
   if (sleepTimer >= 15.0f) {
     currentMode = Mode::X;
-    updateRGBLED(currentMode);
     lastMode = Mode::X;
-    currentMode = Mode::X;
+    updateRGBLED(currentMode);
+    sendCommand(currentMode);
   }
 
   while (RFSerial.available()) {

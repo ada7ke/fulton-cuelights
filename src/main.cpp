@@ -1,3 +1,5 @@
+// TODO: dim leds
+
 #include <Arduino.h>
 #include "receiver.h"
 #include "controller.h"
