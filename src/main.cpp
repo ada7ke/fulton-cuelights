@@ -1,4 +1,12 @@
-// TODO: dim leds
+/* TODO: 
+ - if no signals recieved for 10 seconds, turn on all leds off
+ - convert sleepTimer to use millis()
+ - update receiver echo to also use crc 
+ - long button press features
+    * brightness
+    * turn all leds off
+
+*/
 
 #include <Arduino.h>
 #include "receiver.h"
@@ -38,11 +46,11 @@ void setup()
   deviceRole = autoDetectRole();
   // Begin RF Serial on Serial1 (UART)
   if (deviceRole == ROLE_CONTROLLER) {
-    RFSerial.begin(9600, SERIAL_8N1, 20, 21);
+    RFSerial.begin(9600, SERIAL_8N1, 20, 21); // (i soldered these wrong)
     Serial.println("Auto detected role: CONTROLLER");
     setupController();
   } else {
-    RFSerial.begin(9600, SERIAL_8N1, 21, 20); 
+    RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
     Serial.println("Auto detected role: RECEIVER");
     setupReceiver();
   }
