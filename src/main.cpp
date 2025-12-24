@@ -5,7 +5,6 @@
  - long button press features
     * brightness
     * turn all leds off
-
 */
 
 #include <Arduino.h>
