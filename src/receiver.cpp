@@ -2,6 +2,10 @@
 #include "common.h"
 
 static State state = WAIT_START;
+static uint8_t modeByte;
+static uint8_t redByte;
+static uint8_t recievedChecksum;
+static unsigned long lastMessage = 0;
 
 void setupReceiver()
 {
@@ -15,11 +19,6 @@ void setupReceiver()
 
 void loopReceiver()
 {
-  static uint8_t modeByte;
-  static uint8_t redByte;
-  static uint8_t recievedChecksum;
-  // printf("Waiting for data...\n");
-
   while (RFSerial.available()) {
     uint8_t byteIn = RFSerial.read();
     // printf("Read: 0x%02X\n", byteIn);
@@ -76,6 +75,13 @@ void loopReceiver()
     delay(10);
   }
 
+  if (millis() - lastMessage > 500) {
+    updateLEDs(Mode::X, false);
+    lastMessage = millis();
+    RFSerial.write(static_cast<uint8_t>(Mode::B));
+    printf("No message timeout, turning off LEDs\n");
+  }
+
   digitalWrite(ledPin, HIGH);
   delay(100);
 }
@@ -92,5 +98,4 @@ void updateLEDs(Mode mode, bool mode_r) {
   uint8_t g = (mode == Mode::G) ? 10 : 0;
 
   setLEDs(r, y, g);
-
 }

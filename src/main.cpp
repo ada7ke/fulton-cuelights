@@ -1,6 +1,6 @@
 /* TODO: 
- - if no signals recieved for 10 seconds, turn on all leds off
  - update receiver echo to also use crc 
+ - ota uploads
  - long button press features
     * brightness
     * turn all leds off
