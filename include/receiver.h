@@ -9,10 +9,11 @@ enum State
 {
   WAIT_START,
   READ_MODE,
+  READ_RED,
   READ_CHECKSUM,
   WAIT_END
 };
 
 void setupReceiver();
 void loopReceiver();
-void updateLEDs(Mode mode);
+void updateLEDs(Mode mode, bool mode_r);

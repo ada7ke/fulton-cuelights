@@ -9,86 +9,88 @@ void setupReceiver()
   pinMode(yellowLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
 
-  updateLEDs(Mode::X);
+  updateLEDs(Mode::X, false);
   digitalWrite(ledPin, HIGH);
 }
 
 void loopReceiver()
 {
   static uint8_t modeByte;
+  static uint8_t redByte;
   static uint8_t recievedChecksum;
   // printf("Waiting for data...\n");
 
   while (RFSerial.available()) {
     uint8_t byteIn = RFSerial.read();
-    printf("Read: 0x%02X\n", byteIn);
+    // printf("Read: 0x%02X\n", byteIn);
     digitalWrite(ledPin, LOW);
     Mode mode;
 
     switch (state) {
       case WAIT_START:
-        if (byteIn == 0x7E) {
+        if (byteIn == FRAME_START) {
           state = READ_MODE;
+          printf("Frame start detected\n");
         }
         break;
 
       case READ_MODE:
         modeByte = byteIn;
+        state = READ_RED;
+        printf("Mode byte: 0x%02X\n", modeByte);
+        break;
+
+      case READ_RED:
+        redByte = byteIn;
         state = READ_CHECKSUM;
+        printf("Red byte: 0x%02X\n", redByte);
         break;
 
       case READ_CHECKSUM:
         recievedChecksum = byteIn;
         state = WAIT_END;
+        printf("Received checksum: 0x%02X\n", recievedChecksum);
         break;
 
       case WAIT_END:
-        if (byteIn == 0x7F) {
-          uint8_t data[1] = { modeByte };
-          uint8_t expectedCRC = crc8(data, 1); 
-
-          if (recievedChecksum == expectedCRC &&
-             (modeByte == 'R' || modeByte == 'Y' ||
-              modeByte == 'G' || modeByte == 'X')) {
-            
+        printf("End byte: 0x%02X\n", byteIn);
+        if (byteIn == FRAME_END) {
+          uint8_t data[2] = { modeByte, redByte };
+          uint8_t expectedCRC = crc8(data, 2);
+          printf("Expected CRC: 0x%02X\n", expectedCRC);
+          if (recievedChecksum == expectedCRC && isValidModeByte(modeByte)) {
             mode = static_cast<Mode>(modeByte);
-            printf("Command: %c\n", static_cast<char>(mode));
-            updateLEDs(mode);
-
-            RFSerial.write(modeByte);
+            bool mode_r = (redByte != 0);
+            printf("Command: %c\n", toChar(mode));
+            updateLEDs(mode, mode_r);
+            RFSerial.write(modeByte); // echo unframed byte for now
+          } else {
+            printf("Checksum error or invalid mode byte. Received: 0x%02X, Expected: 0x%02X\n", 
+                    recievedChecksum, expectedCRC);
+            RFSerial.write(static_cast<uint8_t>(Mode::B));
           }
-        else {
-          mode = Mode::X;
         }
         state = WAIT_START;
-      }
+        break;
     }
     delay(10);
-  } 
+  }
 
   digitalWrite(ledPin, HIGH);
   delay(100);
 }
 
-void updateLEDs(Mode mode) {
-  if (mode == Mode::R) {
-    analogWrite(redLED, 20);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
-  }
-  else if (mode == Mode::Y) {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 20);
-    analogWrite(greenLED, 0);
-  }
-  else if (mode == Mode::G) {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 20);
-  }
-  else if (mode == Mode::X) {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
-  }
+void updateLEDs(Mode mode, bool mode_r) {
+  auto setLEDs = [](uint8_t r, uint8_t y, uint8_t g) {
+    analogWrite(redLED, r);
+    analogWrite(yellowLED, y);
+    analogWrite(greenLED, g);
+  };
+
+  uint8_t r = mode_r ? 10 : 0;
+  uint8_t y = (mode == Mode::Y) ? 10 : 0;
+  uint8_t g = (mode == Mode::G) ? 10 : 0;
+
+  setLEDs(r, y, g);
+
 }

@@ -1,14 +1,13 @@
 #include <Arduino.h>
 #include "common.h"
 
+bool mode_r = false;
+bool last_r = false;
+
 void updateRGBLED(Mode mode)
-{
+{  
   switch (mode)
   {
-    case Mode::R:
-      analogWrite(rPin, 255);
-      analogWrite(gPin, 0);
-      analogWrite(bPin, 0);
     case Mode::G:
       analogWrite(rPin, 0);
       analogWrite(gPin, 255);
@@ -44,4 +43,12 @@ uint8_t crc8(const uint8_t* data, size_t len) {
     }
   }
   return crc;
+}
+
+char toChar(Mode mode) {
+  return static_cast<char>(mode);
+}
+
+bool isValidModeByte(uint8_t b) {
+  return (b == 'X' || b == 'R' || b == 'Y' || b == 'G');
 }
