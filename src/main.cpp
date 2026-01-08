@@ -1,6 +1,7 @@
 /* TODO: 
  - update receiver echo to also use crc 
  - ota uploads
+ - change analog write to ledc
  - long button press features
     * brightness
     * turn all leds off
@@ -41,15 +42,17 @@ void setup()
   pinMode(bPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
 
-  deviceRole = autoDetectRole();
+  deviceRole = autoDetectRole(); //autoDetectRole();
   // Begin RF Serial on Serial1 (UART)
   if (deviceRole == ROLE_CONTROLLER) {
     RFSerial.begin(9600, SERIAL_8N1, 20, 21); // (i soldered these wrong)
-    Serial.println("Auto detected role: CONTROLLER");
+    delay(100);
+    printf("Auto detected role: CONTROLLER\n");
     setupController();
   } else {
     RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
-    Serial.println("Auto detected role: RECEIVER");
+    delay(100);
+    printf("Auto detected role: RECEIVER\n");
     setupReceiver();
   }
 }

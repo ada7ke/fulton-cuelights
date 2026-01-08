@@ -6,6 +6,7 @@ static uint8_t modeByte;
 static uint8_t redByte;
 static uint8_t recievedChecksum;
 static unsigned long lastMessage = 0;
+int brightness = 255;
 
 void setupReceiver()
 {
@@ -21,14 +22,14 @@ void loopReceiver()
 {
   while (RFSerial.available()) {
     uint8_t byteIn = RFSerial.read();
-    // printf("Read: 0x%02X\n", byteIn);
-    digitalWrite(ledPin, LOW);
+    printf("Read: 0x%02X\n", byteIn);
     Mode mode;
 
     switch (state) {
       case WAIT_START:
         if (byteIn == FRAME_START) {
           state = READ_MODE;
+          digitalWrite(ledPin, LOW);
           printf("Frame start detected\n");
         }
         break;
@@ -58,6 +59,7 @@ void loopReceiver()
           uint8_t expectedCRC = crc8(data, 2);
           printf("Expected CRC: 0x%02X\n", expectedCRC);
           if (recievedChecksum == expectedCRC && isValidModeByte(modeByte)) {
+            lastMessage = millis();
             mode = static_cast<Mode>(modeByte);
             bool mode_r = (redByte != 0);
             printf("Command: %c\n", toChar(mode));
@@ -75,9 +77,9 @@ void loopReceiver()
     delay(10);
   }
 
-  if (millis() - lastMessage > 500) {
-    updateLEDs(Mode::X, false);
+  if (millis() - lastMessage > 5000) {
     lastMessage = millis();
+    updateLEDs(Mode::X, false);
     RFSerial.write(static_cast<uint8_t>(Mode::B));
     printf("No message timeout, turning off LEDs\n");
   }
@@ -93,9 +95,9 @@ void updateLEDs(Mode mode, bool mode_r) {
     analogWrite(greenLED, g);
   };
 
-  uint8_t r = mode_r ? 10 : 0;
-  uint8_t y = (mode == Mode::Y) ? 10 : 0;
-  uint8_t g = (mode == Mode::G) ? 10 : 0;
+  uint8_t r = mode_r ? brightness : 0;
+  uint8_t y = (mode == Mode::Y) ? brightness : 0;
+  uint8_t g = (mode == Mode::G) ? brightness : 0;
 
   setLEDs(r, y, g);
 }
