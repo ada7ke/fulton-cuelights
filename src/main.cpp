@@ -42,8 +42,7 @@ void setup()
   pinMode(bPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
 
-  deviceRole = autoDetectRole(); //autoDetectRole();
-  // Begin RF Serial on Serial1 (UART)
+  deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
     RFSerial.begin(9600, SERIAL_8N1, 20, 21); // (i soldered these wrong)
     delay(100);

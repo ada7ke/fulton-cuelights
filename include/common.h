@@ -18,15 +18,13 @@ extern bool mode_r;
 extern bool last_r;
 enum class Mode : uint8_t
 {
-  X = 'X',
-  Y = 'Y',
-  G = 'G',
-  B = 'B',
+  X = 'X', // sleep
+  Y = 'Y', // yellow
+  G = 'G', // green
+  B = 'B', // error
+  W = 'W' // unknown error
 };
 
-void updateRGBLED(Mode mode);
 uint8_t crc8(const uint8_t* data, size_t len);
-
-// Utility helpers for logging and validation
 char toChar(Mode mode);
 bool isValidModeByte(uint8_t b);

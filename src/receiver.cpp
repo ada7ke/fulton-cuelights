@@ -1,18 +1,34 @@
 #include "receiver.h"
 #include "common.h"
 
+// setup message receiving
 static State state = WAIT_START;
 static uint8_t modeByte;
 static uint8_t redByte;
 static uint8_t recievedChecksum;
 static unsigned long lastMessage = 0;
+
+// pwm settings
+const int freq = 5000;
+const int res = 8;
 int brightness = 255;
+const int redChannel = 0;
+const int yellowChannel = 1;
+const int greenChannel = 2;
 
 void setupReceiver()
 {
-  pinMode(redLED, OUTPUT);
-  pinMode(yellowLED, OUTPUT);
-  pinMode(greenLED, OUTPUT);
+  // Configure PWM channels
+  ledcSetup(redChannel, freq, res);
+  ledcSetup(yellowChannel, freq, res);
+  ledcSetup(greenChannel, freq, res);
+  
+  // Attach pins to PWM channels
+  ledcAttachPin(redLED, redChannel);
+  ledcAttachPin(yellowLED, yellowChannel);
+  ledcAttachPin(greenLED, greenChannel);
+
+  pinMode(ledPin, OUTPUT);
 
   updateLEDs(Mode::X, false);
   digitalWrite(ledPin, HIGH);
@@ -90,9 +106,9 @@ void loopReceiver()
 
 void updateLEDs(Mode mode, bool mode_r) {
   auto setLEDs = [](uint8_t r, uint8_t y, uint8_t g) {
-    analogWrite(redLED, r);
-    analogWrite(yellowLED, y);
-    analogWrite(greenLED, g);
+    ledcWrite(redChannel, r);
+    ledcWrite(yellowChannel, y);
+    ledcWrite(greenChannel, g);
   };
 
   uint8_t r = mode_r ? brightness : 0;

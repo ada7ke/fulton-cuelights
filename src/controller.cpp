@@ -45,7 +45,7 @@ void loopController() {
       updateRGBLED(static_cast<Mode>(raw));
     }
     else {
-      updateRGBLED(Mode::B);
+      updateRGBLED(Mode::W);
     }
   }
   delay(100);
@@ -116,4 +116,36 @@ void sendCommand(Mode mode, bool mode_r) {
   printf("mode_r: %d\n", mode_r ? 1 : 0);
   // printf("CRC: 0x%02X\n", crc);
   ledOnTime = millis() + 50;
+}
+
+void updateRGBLED(Mode mode)
+{  
+  switch (mode)
+  {
+    case Mode::G:
+      analogWrite(rPin, 0);
+      analogWrite(gPin, 255);
+      analogWrite(bPin, 0);
+      break;
+    case Mode::Y:
+      analogWrite(rPin, 255);
+      analogWrite(gPin, 100);
+      analogWrite(bPin, 0);
+      break;
+    case Mode::X:
+      analogWrite(rPin, 0);
+      analogWrite(gPin, 0);
+      analogWrite(bPin, 0);
+      break;
+    case Mode::B:
+      analogWrite(rPin, 0);
+      analogWrite(gPin, 0);
+      analogWrite(bPin, 255);
+      break;
+    default:
+      analogWrite(rPin, 255);
+      analogWrite(gPin, 255);
+      analogWrite(bPin, 255);
+      break;
+  }
 }
