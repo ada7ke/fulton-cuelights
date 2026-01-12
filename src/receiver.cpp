@@ -36,70 +36,26 @@ void setupReceiver()
 
 void loopReceiver()
 {
-  while (RFSerial.available()) {
-    uint8_t byteIn = RFSerial.read();
-    printf("Read: 0x%02X\n", byteIn);
-    Mode mode;
-
-    switch (state) {
-      case WAIT_START:
-        if (byteIn == FRAME_START) {
-          state = READ_MODE;
-          digitalWrite(ledPin, LOW);
-          printf("Frame start detected\n");
-        }
-        break;
-
-      case READ_MODE:
-        modeByte = byteIn;
-        state = READ_RED;
-        printf("Mode byte: 0x%02X\n", modeByte);
-        break;
-
-      case READ_RED:
-        redByte = byteIn;
-        state = READ_CHECKSUM;
-        printf("Red byte: 0x%02X\n", redByte);
-        break;
-
-      case READ_CHECKSUM:
-        recievedChecksum = byteIn;
-        state = WAIT_END;
-        printf("Received checksum: 0x%02X\n", recievedChecksum);
-        break;
-
-      case WAIT_END:
-        printf("End byte: 0x%02X\n", byteIn);
-        if (byteIn == FRAME_END) {
-          uint8_t data[2] = { modeByte, redByte };
-          uint8_t expectedCRC = crc8(data, 2);
-          printf("Expected CRC: 0x%02X\n", expectedCRC);
-          if (recievedChecksum == expectedCRC && isValidModeByte(modeByte)) {
-            lastMessage = millis();
-            mode = static_cast<Mode>(modeByte);
-            bool mode_r = (redByte != 0);
-            printf("Command: %c\n", toChar(mode));
-            updateLEDs(mode, mode_r);
-            RFSerial.write(modeByte); // echo unframed byte for now
-          } else {
-            printf("Checksum error or invalid mode byte. Received: 0x%02X, Expected: 0x%02X\n", 
-                    recievedChecksum, expectedCRC);
-            RFSerial.write(static_cast<uint8_t>(Mode::B));
-          }
-        }
-        state = WAIT_START;
-        break;
-    }
-    delay(10);
+  Frame f;
+  if (readFrame(f)) {
+      if (f.device == CONTROLLER_ADDRESS && isValidModeByte((uint8_t)f.mode)) {
+        digitalWrite(ledPin, LOW);  
+        lastMessage = millis();
+          updateLEDs(static_cast<Mode>(f.mode), f.red);
+          Frame echo = { RECEIVER_ADDRESS, f.mode, f.red };
+          sendFrame(echo);
+      }
   }
 
   if (millis() - lastMessage > 5000) {
     lastMessage = millis();
-    updateLEDs(Mode::X, false);
-    RFSerial.write(static_cast<uint8_t>(Mode::B));
+    updateLEDs(Mode::B, false);
+    Frame timeoutFrame = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::B), 0 };
+    sendFrame(timeoutFrame);
     printf("No message timeout, turning off LEDs\n");
   }
 
+  delay(10);
   digitalWrite(ledPin, HIGH);
   delay(100);
 }

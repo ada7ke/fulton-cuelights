@@ -11,8 +11,25 @@
 #define RX_PIN 21 // swap rx and tx pins
 #define TX_PIN 20 // swap rx and tx pins
 
-constexpr uint8_t FRAME_START = 0x7E;
-constexpr uint8_t FRAME_END   = 0x7F;
+#define FRAME_START 0x7E
+#define FRAME_END 0x7F
+#define CONTROLLER_ADDRESS 0x01
+#define RECEIVER_ADDRESS 0x02
+
+struct Frame {
+  uint8_t device;
+  uint8_t mode;
+  uint8_t red;
+};
+
+enum State
+{
+  WAIT_START,
+  READ_MODE,
+  READ_RED,
+  READ_CHECKSUM,
+  WAIT_END
+};
 
 extern bool mode_r;
 extern bool last_r;
@@ -21,10 +38,13 @@ enum class Mode : uint8_t
   X = 'X', // sleep
   Y = 'Y', // yellow
   G = 'G', // green
-  B = 'B', // error
+  R = 'R', // failed checksum
+  B = 'B', // no message timeout
   W = 'W' // unknown error
 };
 
-uint8_t crc8(const uint8_t* data, size_t len);
 char toChar(Mode mode);
-bool isValidModeByte(uint8_t b);
+bool isValidModeByte(uint8_t byte);
+uint8_t crc8(const uint8_t* data, size_t len);
+void sendFrame(const Frame& frame);
+bool readFrame(Frame &out);
