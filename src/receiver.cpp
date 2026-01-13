@@ -11,7 +11,7 @@ static unsigned long lastMessage = 0;
 // pwm settings
 const int freq = 5000;
 const int res = 8;
-int brightness = 255;
+int brightness = 5; // brightness level (0-255)
 const int redChannel = 0;
 const int yellowChannel = 1;
 const int greenChannel = 2;
@@ -72,4 +72,5 @@ void updateLEDs(Mode mode, bool mode_r) {
   uint8_t g = (mode == Mode::G) ? brightness : 0;
 
   setLEDs(r, y, g);
+  printf("Updated LEDs - R: %d, Y: %d, G: %d\n", r, y, g);
 }
