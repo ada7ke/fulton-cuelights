@@ -28,10 +28,10 @@ void setupReceiver()
   ledcAttachPin(yellowLED, yellowChannel);
   ledcAttachPin(greenLED, greenChannel);
 
-  pinMode(ledPin, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
   updateLEDs(Mode::X, false);
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(LED_PIN, HIGH);
 }
 
 void loopReceiver()
@@ -39,7 +39,7 @@ void loopReceiver()
   Frame f;
   if (readFrame(f)) {
       if (f.device == CONTROLLER_ADDRESS && isValidModeByte((uint8_t)f.mode)) {
-        digitalWrite(ledPin, LOW);  
+        digitalWrite(LED_PIN, LOW);  
         lastMessage = millis();
           updateLEDs(static_cast<Mode>(f.mode), f.red);
           Frame echo = { RECEIVER_ADDRESS, f.mode, f.red };
@@ -56,7 +56,7 @@ void loopReceiver()
   }
 
   delay(10);
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   delay(100);
 }
 

@@ -18,7 +18,7 @@ void setupController() {
   pinMode(gButtonPin, INPUT_PULLUP);
 
   updateRGBLED(currentMode);
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   lastActivity = millis();
 }
 
@@ -44,7 +44,7 @@ void loopController() {
   }
 
   updateRGBLED(RGBLEDMode);
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   delay(100);
 }
 
@@ -91,12 +91,12 @@ void sendCurrentMode(Mode mode, bool mode_r) {
 }
 
 void sendCommand(Mode mode, bool mode_r) {
-  digitalWrite(ledPin, LOW);
+  digitalWrite(LED_PIN, LOW);
   Frame frame = { CONTROLLER_ADDRESS, static_cast<uint8_t>(mode), static_cast<uint8_t>(mode_r)};
   sendFrame(frame);
   printf("Sent mode: %c\n", toChar(mode));
   delay(10);
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(LED_PIN, HIGH);
 }
 
 void updateRGBLED(Mode mode)

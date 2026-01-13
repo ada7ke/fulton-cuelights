@@ -5,7 +5,7 @@
 #define rPin 2 
 #define gPin 1
 #define bPin 0
-#define ledPin 8
+#define LED_PIN 8
 
 #define RFSerial Serial1
 #define RX_PIN 21 // swap rx and tx pins

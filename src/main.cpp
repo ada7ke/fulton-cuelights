@@ -9,6 +9,7 @@
 #include "receiver.h"
 #include "controller.h"
 #include "common.h"
+#include "WifiAP.hpp"
 
 #define ROLE_DETECT_PIN 5
 
@@ -36,10 +37,12 @@ void setup()
   delay(1000);
   Serial.flush();
 
+  setup_wifi();
+
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
   pinMode(bPin, OUTPUT);
-  pinMode(ledPin, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
   deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
@@ -57,6 +60,10 @@ void setup()
 
 void loop()
 {
+  ArduinoOTA.handle();
+  ElegantOTA.loop();
+  dnsServer.processNextRequest();
+  
   if (deviceRole == ROLE_CONTROLLER) {
     loopController();
   } else {
