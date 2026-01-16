@@ -1,5 +1,6 @@
 /* TODO:
  - red button
+ - receiver echo
  - long button press features
     * yellow: brightness
     * green: modes

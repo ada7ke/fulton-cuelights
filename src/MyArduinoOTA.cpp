@@ -4,16 +4,17 @@
 
 #include <Arduino.h>
 #include "MyArduinoOTA.h"
+#include "dataConfig.h"
 
 bool otaEnabling = false;
 bool otaEnabled = false;
 bool otaStarted = false;
 
-
-
 void setupOTA() {
     Serial.println("Setting up OTA.");
-    ArduinoOTA.setPassword(OTA_PASSWORD);
+    if (OTA_PASSWORD != nullptr && OTA_PASSWORD[0] != '\0') {
+        ArduinoOTA.setPassword(OTA_PASSWORD);
+    }
     ArduinoOTA.onStart([]() {
         String type;
         if (ArduinoOTA.getCommand() == U_FLASH)

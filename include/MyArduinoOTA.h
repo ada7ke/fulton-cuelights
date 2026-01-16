@@ -9,7 +9,6 @@
 // OTA WiFi AP credentials and password
 extern const char *ssid_base;
 extern const char *wifiPassword;
-#define OTA_PASSWORD "CUE_OTA_ESP32"
 
 // OTA-related variables
 extern bool otaEnabling;

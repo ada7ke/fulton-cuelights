@@ -4,10 +4,7 @@
 #include <WiFi.h>
 #include "WifiAP.hpp"
 
-const char *ssid = "XXXX";
-const char *password = "XXXXXXXX";
-const char *ssid2 = "YYYY";
-const char *password2 = "YYYYYYYY";
+#include "dataConfig.h"
 
 WiFiMulti wifiMulti;
 
@@ -19,7 +16,7 @@ const char *ssid_base = STR(AP_BASE);
 const char *ssid_base = "AP_BASE";
 #endif
 
-const char *wifiPassword = "cuelights";
+const char *wifiPassword = WIFI_AP_PASSWORD;
 DNSServer dnsServer;
 
 // Function to setup WiFi as AP for OTA
@@ -51,8 +48,12 @@ void setup_wifi()
     setupWifiAP();
 
     // Initialize Wi-Fi and connect
-    wifiMulti.addAP(ssid, password);
-    wifiMulti.addAP(ssid2, password2);
+    if (WIFI_STA_SSID_1[0] != '\0') {
+        wifiMulti.addAP(WIFI_STA_SSID_1, WIFI_STA_PASS_1);
+    }
+    if (WIFI_STA_SSID_2[0] != '\0') {
+        wifiMulti.addAP(WIFI_STA_SSID_2, WIFI_STA_PASS_2);
+    }
 
     Serial.println("Connecting to Wi-Fi");
     // Check if Wi-Fi is connected
