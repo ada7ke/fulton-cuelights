@@ -20,16 +20,12 @@ struct Frame {
   uint8_t device;
   uint8_t mode;
   uint8_t red;
+  uint8_t brightness;
 };
 
-enum State
-{
-  WAIT_START,
-  READ_MODE,
-  READ_RED,
-  READ_CHECKSUM,
-  WAIT_END
-};
+// Shared button long-press duration (milliseconds).
+// Kept in the common header so both controller and receiver can use it.
+inline constexpr unsigned long longHoldDuration = 3000UL;
 
 extern bool mode_r;
 extern bool last_r;

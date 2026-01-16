@@ -1,29 +1,22 @@
 #include "receiver.h"
 #include "common.h"
 
-// setup message receiving
-static State state = WAIT_START;
-static uint8_t modeByte;
-static uint8_t redByte;
-static uint8_t recievedChecksum;
-static unsigned long lastMessage = 0;
-
 // pwm settings
 const int freq = 5000;
 const int res = 8;
-int brightness = 5; // brightness level (0-255)
+static uint8_t brightness = 5; // (1/5/10/15)
 const int redChannel = 0;
 const int yellowChannel = 1;
 const int greenChannel = 2;
 
+static unsigned long lastMessage = 0;
+
 void setupReceiver()
 {
-  // Configure PWM channels
   ledcSetup(redChannel, freq, res);
   ledcSetup(yellowChannel, freq, res);
   ledcSetup(greenChannel, freq, res);
-  
-  // Attach pins to PWM channels
+
   ledcAttachPin(redLED, redChannel);
   ledcAttachPin(yellowLED, yellowChannel);
   ledcAttachPin(greenLED, greenChannel);
@@ -41,16 +34,17 @@ void loopReceiver()
       if (f.device == CONTROLLER_ADDRESS && isValidModeByte((uint8_t)f.mode)) {
         digitalWrite(LED_PIN, LOW);  
         lastMessage = millis();
-          updateLEDs(static_cast<Mode>(f.mode), f.red);
-          Frame echo = { RECEIVER_ADDRESS, f.mode, f.red };
-          sendFrame(echo);
+        brightness = f.brightness;
+        updateLEDs(static_cast<Mode>(f.mode), f.red);
+        Frame echo = { RECEIVER_ADDRESS, f.mode, f.red, brightness };
+        sendFrame(echo);
       }
   }
 
   if (millis() - lastMessage > 5000) {
     lastMessage = millis();
     updateLEDs(Mode::B, false);
-    Frame timeoutFrame = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::B), 0 };
+    Frame timeoutFrame = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::B), 0, brightness };
     sendFrame(timeoutFrame);
     printf("No message timeout, turning off LEDs\n");
   }
@@ -72,5 +66,5 @@ void updateLEDs(Mode mode, bool mode_r) {
   uint8_t g = (mode == Mode::G) ? brightness : 0;
 
   setLEDs(r, y, g);
-  printf("Updated LEDs - R: %d, Y: %d, G: %d\n", r, y, g);
+  printf("Updated LEDs - Duty: %u | R: %u, Y: %u, G: %u\n", brightness, r, y, g);
 }

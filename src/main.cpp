@@ -1,8 +1,12 @@
 /* TODO:
- - ota uploads
+ - debug packet delays
+ - redo echo led logic
+ - red button
+ - faster pings
+ - blink led when changing brightness
  - long button press features
-    * brightness
-    * turn all leds off
+    * yellow: brightness
+    * green: modes
 */
 
 #include <Arduino.h>

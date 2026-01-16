@@ -10,6 +10,9 @@ static unsigned long interval = 1000;
 static unsigned long lastActivity = 0;
 static unsigned long sleepTimer = 5000;
 
+static const uint8_t brightnessOptions[] = { 1, 5, 10, 15 };
+static uint8_t brightnessIndex = 1; // default to 5
+
 void setupController() {
   randomSeed(micros());
 
@@ -44,12 +47,14 @@ void loopController() {
   }
 
   updateRGBLED(RGBLEDMode);
-  digitalWrite(LED_PIN, HIGH);
   delay(100);
 }
 
 void detectButtonChange() {
   static bool lastRButton = false;
+  static bool lastYButton = false;
+  static unsigned long yPressStart = 0;
+  static bool yLongHandled = false;
 
   bool rButton = (digitalRead(rButtonPin) == LOW);
   bool yButton = (digitalRead(yButtonPin) == LOW);
@@ -64,12 +69,29 @@ void detectButtonChange() {
     currentMode = Mode::Y;
     stateChanged = true;
   }
+
+  if (yButton && !lastYButton) {
+    yPressStart = millis();
+    yLongHandled = false;
+  }
+  if (!yButton && lastYButton) {
+    yPressStart = 0;
+    yLongHandled = false;
+  }
+  if (yButton && yPressStart != 0 && !yLongHandled && (millis() - yPressStart >= longHoldDuration)) {
+    brightnessIndex = (brightnessIndex + 1) % (sizeof(brightnessOptions) / sizeof(brightnessOptions[0]));
+    yLongHandled = true;
+    sendCommand(currentMode, mode_r);
+    printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
+    lastActivity = millis();
+  }
   if (lastRButton!= rButton) {
     mode_r = !mode_r;
     stateChanged = true;
   }
 
   lastRButton = rButton;
+  lastYButton = yButton;
 
   if (stateChanged) {
     lastMode = currentMode;
@@ -79,7 +101,6 @@ void detectButtonChange() {
     lastActivity = millis();
   }
 }
-
 
 void sendCurrentMode(Mode mode, bool mode_r) {
 
@@ -92,7 +113,7 @@ void sendCurrentMode(Mode mode, bool mode_r) {
 
 void sendCommand(Mode mode, bool mode_r) {
   digitalWrite(LED_PIN, LOW);
-  Frame frame = { CONTROLLER_ADDRESS, static_cast<uint8_t>(mode), static_cast<uint8_t>(mode_r)};
+  Frame frame = { CONTROLLER_ADDRESS, static_cast<uint8_t>(mode), static_cast<uint8_t>(mode_r), brightnessOptions[brightnessIndex] };
   sendFrame(frame);
   printf("Sent mode: %c\n", toChar(mode));
   delay(10);

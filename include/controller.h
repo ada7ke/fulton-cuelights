@@ -8,6 +8,10 @@
 void setupController();
 void loopController();
 void detectButtonChange();
+void handleModeButtons();
+void handleRedToggle();
+void handleYellowLongHold();
+void handleGreenLongHold();
 void sendCurrentMode(Mode mode, bool mode_r);
 void sendCommand(Mode mode, bool mode_r);
 void updateRGBLED(Mode mode);

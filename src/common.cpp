@@ -28,29 +28,30 @@ uint8_t crc8(const uint8_t* data, size_t len) {
 
 void sendFrame(const Frame& frame)
 {
-  uint8_t payload[3] = { frame.device, frame.mode, frame.red };
-  uint8_t crc = crc8(payload, 3);
+  uint8_t payload[4] = { frame.device, frame.mode, frame.red, frame.brightness };
+  uint8_t crc = crc8(payload, 4);
 
-  printf("Mode: %c\n Red: %c\n", static_cast<char>(frame.mode), static_cast<uint8_t>(frame.red));
-  printf("Sending frame: START %02X %02X %02X CRC %02X END\n", 
-         payload[0], payload[1], payload[2], crc);
+  printf("Mode: %c\n Red: %c\n Brightness: %u\n", static_cast<char>(frame.mode), static_cast<uint8_t>(frame.red), frame.brightness);
+  printf("Sending frame: START %02X %02X %02X %02X CRC %02X END\n",
+         payload[0], payload[1], payload[2], payload[3], crc);
 
-  uint8_t raw[6] = {
+  uint8_t raw[7] = {
     FRAME_START,
     payload[0],
     payload[1],
     payload[2],
+    payload[3],
     crc,
     FRAME_END
   };
 
-  RFSerial.write(raw, 6);
+  RFSerial.write(raw, 7);
 }
 
 bool readFrame(Frame &out)
 {
   static uint8_t state = 0;
-  static uint8_t buf[6];
+  static uint8_t buf[7];
   static uint8_t crc;
 
   while (RFSerial.available())
@@ -62,21 +63,22 @@ bool readFrame(Frame &out)
 
     buf[state++] = byte;
 
-    if (state == 6) {
+    if (state == 7) {
       state = 0;
 
-      if (buf[5] != FRAME_END) return false;
+      if (buf[6] != FRAME_END) return false;
 
-      crc = crc8(&buf[1], 3);
-      if (crc != buf[4]) return false;
+      crc = crc8(&buf[1], 4);
+      if (crc != buf[5]) return false;
 
       out.device = buf[1];
       out.mode   = buf[2];
       out.red    = buf[3];
+      out.brightness = buf[4];
 
-      printf("Mode: %c\n Red: %c\n", static_cast<char>(out.mode), static_cast<uint8_t>(out.red));
-      printf("Received frame: START %02X %02X %02X CRC %02X END\n", 
-             buf[1], buf[2], buf[3], buf[4]);
+      printf("Mode: %c\n Red: %c\n Brightness: %u\n", static_cast<char>(out.mode), static_cast<uint8_t>(out.red), out.brightness);
+      printf("Received frame: START %02X %02X %02X %02X CRC %02X END\n",
+             buf[1], buf[2], buf[3], buf[4], buf[5]);
       return true;
     }
     delay(10);
