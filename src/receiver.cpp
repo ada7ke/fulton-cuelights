@@ -11,8 +11,14 @@ const int greenChannel = 2;
 
 static unsigned long lastMessage = 0;
 
+static Frame lastEcho = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::X), 0, brightness };
+static unsigned long lastSend = 0;
+static unsigned long sendInterval = 500;
+
 void setupReceiver()
 {
+  randomSeed(micros());
+
   ledcSetup(redChannel, freq, res);
   ledcSetup(yellowChannel, freq, res);
   ledcSetup(greenChannel, freq, res);
@@ -25,6 +31,10 @@ void setupReceiver()
 
   updateLEDs(Mode::X, false);
   digitalWrite(LED_PIN, HIGH);
+
+  lastMessage = millis();
+  lastEcho = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::X), 0, brightness };
+  lastSend = 0;
 }
 
 void loopReceiver()
@@ -36,16 +46,24 @@ void loopReceiver()
         lastMessage = millis();
         brightness = f.brightness;
         updateLEDs(static_cast<Mode>(f.mode), f.red);
-        Frame echo = { RECEIVER_ADDRESS, f.mode, f.red, brightness };
-        sendFrame(echo);
+        lastEcho = { RECEIVER_ADDRESS, f.mode, f.red, brightness };
       }
   }
 
+  if (millis() - lastSend >= sendInterval) {
+    lastSend = millis();
+    sendFrame(lastEcho);
+    sendInterval = 500 + random(-50, 51);
+  }
+
+  // no message timeout
   if (millis() - lastMessage > 5000) {
     lastMessage = millis();
     updateLEDs(Mode::B, false);
-    Frame timeoutFrame = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::B), 0, brightness };
-    sendFrame(timeoutFrame);
+
+    lastEcho = { RECEIVER_ADDRESS, static_cast<uint8_t>(Mode::B), 0, brightness };
+    sendFrame(lastEcho);
+
     printf("No message timeout, turning off LEDs\n");
   }
 
@@ -66,5 +84,5 @@ void updateLEDs(Mode mode, bool mode_r) {
   uint8_t g = (mode == Mode::G) ? brightness : 0;
 
   setLEDs(r, y, g);
-  printf("Updated LEDs - Duty: %u | R: %u, Y: %u, G: %u\n", brightness, r, y, g);
+  printf("Updated LEDs - Brightness: %u | R: %u, Y: %u, G: %u\n", brightness, r, y, g);
 }

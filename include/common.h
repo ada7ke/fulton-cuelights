@@ -23,8 +23,6 @@ struct Frame {
   uint8_t brightness;
 };
 
-// Shared button long-press duration (milliseconds).
-// Kept in the common header so both controller and receiver can use it.
 inline constexpr unsigned long longHoldDuration = 3000UL;
 
 extern bool mode_r;

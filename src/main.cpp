@@ -1,9 +1,5 @@
 /* TODO:
- - debug packet delays
- - redo echo led logic
  - red button
- - faster pings
- - blink led when changing brightness
  - long button press features
     * yellow: brightness
     * green: modes
@@ -41,7 +37,7 @@ void setup()
   delay(1000);
   Serial.flush();
 
-  setup_wifi();
+  // setup_wifi(); disabled ota
 
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
@@ -64,9 +60,9 @@ void setup()
 
 void loop()
 {
-  ArduinoOTA.handle();
-  ElegantOTA.loop();
-  dnsServer.processNextRequest();
+  // ArduinoOTA.handle();
+  // ElegantOTA.loop();
+  // dnsServer.processNextRequest();
   
   if (deviceRole == ROLE_CONTROLLER) {
     loopController();
