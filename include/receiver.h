@@ -7,4 +7,4 @@
 
 void setupReceiver();
 void loopReceiver();
-void updateLEDs(Mode mode, bool mode_r);
+void updateLEDs(uint8_t red, uint8_t yellow, uint8_t green);

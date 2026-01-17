@@ -8,10 +8,6 @@ char toChar(Mode mode) {
   return static_cast<char>(mode);
 }
 
-bool isValidModeByte(uint8_t byte) {
-  return (byte == 'X' || byte == 'R' || byte == 'Y' || byte == 'G' || byte == 'B');
-}
-
 uint8_t crc8(const uint8_t* data, size_t len) {
   uint8_t crc = 0x00;
   for (size_t i = 0; i < len; i++) {
@@ -28,30 +24,32 @@ uint8_t crc8(const uint8_t* data, size_t len) {
 
 void sendFrame(const Frame& frame)
 {
-  uint8_t payload[4] = { frame.device, frame.mode, frame.red, frame.brightness };
-  uint8_t crc = crc8(payload, 4);
+  uint8_t payload[5] = { frame.device, frame.red, frame.yellow, frame.green, frame.brightness };
+  uint8_t crc = crc8(payload, 5);
 
-  printf("Mode: %c\n Red: %c\n Brightness: %u\n", static_cast<char>(frame.mode), static_cast<uint8_t>(frame.red), frame.brightness);
-  printf("Sending frame: START %02X %02X %02X %02X CRC %02X END\n",
-         payload[0], payload[1], payload[2], payload[3], crc);
+  printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
+         frame.red, frame.yellow, frame.green, frame.brightness);
+  printf("Sending frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
+         payload[0], payload[1], payload[2], payload[3], payload[4], crc);
 
-  uint8_t raw[7] = {
+  uint8_t raw[8] = {
     FRAME_START,
     payload[0],
     payload[1],
     payload[2],
     payload[3],
+    payload[4],
     crc,
     FRAME_END
   };
 
-  RFSerial.write(raw, 7);
+  RFSerial.write(raw, 8);
 }
 
 bool readFrame(Frame &out)
 {
   static uint8_t state = 0;
-  static uint8_t buf[7];
+  static uint8_t buf[8];
   static uint8_t crc;
 
   while (RFSerial.available())
@@ -63,22 +61,24 @@ bool readFrame(Frame &out)
 
     buf[state++] = byte;
 
-    if (state == 7) {
+    if (state == 8) {
       state = 0;
 
-      if (buf[6] != FRAME_END) return false;
+      if (buf[7] != FRAME_END) return false;
 
-      crc = crc8(&buf[1], 4);
-      if (crc != buf[5]) return false;
+      crc = crc8(&buf[1], 5);
+      if (crc != buf[6]) return false;
 
       out.device = buf[1];
-      out.mode   = buf[2];
-      out.red    = buf[3];
-      out.brightness = buf[4];
+      out.red = buf[2];
+      out.yellow = buf[3];
+      out.green = buf[4];
+      out.brightness = buf[5];
 
-      printf("Mode: %c\n Red: %c\n Brightness: %u\n", static_cast<char>(out.mode), static_cast<uint8_t>(out.red), out.brightness);
-      printf("Received frame: START %02X %02X %02X %02X CRC %02X END\n",
-             buf[1], buf[2], buf[3], buf[4], buf[5]);
+      printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
+             out.red, out.yellow, out.green, out.brightness);
+      printf("Received frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
+             buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
       return true;
     }
     delay(10);

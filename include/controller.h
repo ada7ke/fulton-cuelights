@@ -7,11 +7,10 @@
 
 void setupController();
 void loopController();
+void mode1();
+void mode2();
+void ledBlink(int times);
 void detectButtonChange();
-void handleModeButtons();
-void handleRedToggle();
-void handleYellowLongHold();
-void handleGreenLongHold();
-void sendCurrentMode(Mode mode, bool mode_r);
-void sendCommand(Mode mode, bool mode_r);
+void sendCurrentState(uint8_t red, uint8_t yellow, uint8_t green);
+void sendCommand(uint8_t red, uint8_t yellow, uint8_t green);
 void updateRGBLED(Mode mode);
