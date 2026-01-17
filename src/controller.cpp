@@ -35,12 +35,13 @@ void setupController() {
   pinMode(yButtonPin, INPUT_PULLUP);
   pinMode(gButtonPin, INPUT_PULLUP);
 
-  updateRGBLED(currentMode);
+  updateRGBLED(0, 0, 0, 0);
   digitalWrite(LED_PIN, HIGH);
   lastActivity = millis();
 }
 
 void loopController() {
+  serviceActivityLed();
   detectButtonChange();
 
   if (btn.gLong) {
@@ -67,22 +68,27 @@ void loopController() {
   while (RFSerial.available()) {
     Frame f;
     if (readFrame(f) && f.device == RECEIVER_ADDRESS) {
-      printf("Receiver echo R:%u Y:%u G:%u Bright:%u\n", f.red, f.yellow, f.green, f.brightness);
+      updateRGBLED(f.red, f.yellow, f.green, 0);
+      printf("Receiver echo R:%u Y:%u G:%u Brightness:%u\n", f.red, f.yellow, f.green, f.brightness);
     }
   }
-
-  delay(100);
 }
 
 void mode1() {
   stateChanged = false;
 
-  if (btn.g && currentMode != Mode::G) {
-    currentMode = Mode::G;
-    stateChanged = true;
-  } else if (btn.y && currentMode != Mode::Y) {
-    currentMode = Mode::Y;
-    stateChanged = true;
+  if (btn.gPressed) {
+    btn.gPressed = false;
+    if (currentMode != Mode::G) {
+      currentMode = Mode::G;
+      stateChanged = true;
+    }
+  } else if (btn.yPressed) {
+    btn.yPressed = false;
+    if (currentMode != Mode::Y) {
+      currentMode = Mode::Y;
+      stateChanged = true;
+    }
   }
 
   if (btn.rPressed) {
@@ -104,33 +110,41 @@ void mode1() {
   sendCurrentState(red, yellow, green);
   if (stateChanged) {
     sendCommand(red, yellow, green);
-    printf("Controller mode: %c  R:%u Y:%u G:%u\n", toChar(currentMode), red, yellow, green);
     lastActivity = millis();
   }
-
-  updateRGBLED(currentMode);
 }
 
 void mode2() {
   stateChanged = false;
 
+  // Mode 2 uses toggle-on-press; add a short lockout to prevent switch bounce
+  // from generating multiple press edges and toggling back immediately.
+  static unsigned long yToggleLockoutUntil = 0;
+  static unsigned long gToggleLockoutUntil = 0;
+  static const unsigned long toggleDebounceMs = 200;
+
   if (btn.yPressed) {
     btn.yPressed = false;
-    mode2Mask ^= 0x01;
-    stateChanged = true;
+    if ((long)(millis() - yToggleLockoutUntil) >= 0) {
+      mode2Mask ^= 0x01;
+      stateChanged = true;
+      yToggleLockoutUntil = millis() + toggleDebounceMs;
+    }
   }
   if (btn.gPressed) {
     btn.gPressed = false;
-    mode2Mask ^= 0x02;
-    stateChanged = true;
+    if ((long)(millis() - gToggleLockoutUntil) >= 0) {
+      mode2Mask ^= 0x02;
+      stateChanged = true;
+      gToggleLockoutUntil = millis() + toggleDebounceMs;
+    }
   }
 
-  // Red is a latching button: use the current physical state.
-  static bool lastRedLatch = false;
-  if (btn.r != lastRedLatch) {
-    lastRedLatch = btn.r;
-    stateChanged = true;
-  }
+  // static bool lastRedLatch = false;
+  // if (btn.r != lastRedLatch) {
+  //   lastRedLatch = btn.r;
+  //   stateChanged = true;
+  // }
 
   uint8_t red = btn.r ? 1 : 0;
   uint8_t yellow = (mode2Mask & 0x01) ? 1 : 0;
@@ -139,26 +153,15 @@ void mode2() {
   sendCurrentState(red, yellow, green);
   if (stateChanged) {
     sendCommand(red, yellow, green);
-    printf("Mode2 state: R:%u Y:%u G:%u\n", red, yellow, green);
     lastActivity = millis();
   }
-
-  if (green && yellow) {
-    updateRGBLED(Mode::T);
-  } else if (green) {
-    updateRGBLED(Mode::G);
-  } else if (yellow) {
-    updateRGBLED(Mode::R);
-  } else {
-    updateRGBLED(Mode::X);
-  }  
 }
 
 void ledBlink(int times) {
   for (int i = 0; i < times; ++i) {
-    updateRGBLED(Mode::B);
+    updateRGBLED(0, 0, 0, 1);
     delay(200);
-    updateRGBLED(Mode::X);
+    updateRGBLED(0, 0, 0, 0);
     delay(150);
   }
 }
@@ -231,53 +234,82 @@ void sendCurrentState(uint8_t red, uint8_t yellow, uint8_t green) {
 }
 
 void sendCommand(uint8_t red, uint8_t yellow, uint8_t green) {
-  digitalWrite(LED_PIN, LOW);
+  pulseActivityLed(10);
   Frame frame = { CONTROLLER_ADDRESS, red, yellow, green, brightnessOptions[brightnessIndex] };
   sendFrame(frame);
   printf("Sent state R:%u Y:%u G:%u\n", red, yellow, green);
-  delay(10);
-  digitalWrite(LED_PIN, HIGH);
 }
 
-void updateRGBLED(Mode mode)
+void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue)
 {  
-  switch (mode)
-  {
-    case Mode::X: // sleep
-      analogWrite(rPin, 0);
-      analogWrite(gPin, 0);
-      analogWrite(bPin, 0);
-      break;
-    case Mode::G: // green
-      analogWrite(rPin, 0);
-      analogWrite(gPin, 255);
-      analogWrite(bPin, 0);
-      break;
-    case Mode::Y: // yellow
+  if (blue) {
+    analogWrite(rPin, 0);
+    analogWrite(gPin, 0);
+    analogWrite(bPin, 255);
+  } else if (yellow && green) {
+    analogWrite(rPin, 255);
+    analogWrite(gPin, 200);
+    analogWrite(bPin, 0);
+  } else if (green) {
+    analogWrite(rPin, 0);
+    analogWrite(gPin, 255);
+    analogWrite(bPin, 0);
+  } else if (yellow) {
+    if (systemMode == 1) {
       analogWrite(rPin, 255);
       analogWrite(gPin, 100);
       analogWrite(bPin, 0);
-      break;
-    case Mode::T: // yellow and green
-      analogWrite(rPin, 255);
-      analogWrite(gPin, 200);
-      analogWrite(bPin, 0);
-      break;
-    case Mode::B: // no message timeout
-      analogWrite(rPin, 0);
-      analogWrite(gPin, 0);
-      analogWrite(bPin, 255);
-      break;
-    case Mode::R: // failed checksum
+    } else if (systemMode == 2) {
       analogWrite(rPin, 255);
       analogWrite(gPin, 0);
       analogWrite(bPin, 0);
-      break;
-    default: // unknown error
-      printf("Unknown RGB LED mode: %c\n", toChar(mode));
-      analogWrite(rPin, 255);
-      analogWrite(gPin, 255);
-      analogWrite(bPin, 255);
-      break;
+    }
+  } else if (red) {
+    analogWrite(rPin, 255);
+    analogWrite(gPin, 0);
+    analogWrite(bPin, 255);
+  } else {
+    analogWrite(rPin, 0);
+    analogWrite(gPin, 0);
+    analogWrite(bPin, 0);
   }
+  // switch (mode)
+  // {
+  //   case Mode::X: // sleep
+  //     analogWrite(rPin, 0);
+  //     analogWrite(gPin, 0);
+  //     analogWrite(bPin, 0);
+  //     break;
+  //   case Mode::G: // green
+  //     analogWrite(rPin, 0);
+  //     analogWrite(gPin, 255);
+  //     analogWrite(bPin, 0);
+  //     break;
+  //   case Mode::Y: // yellow
+  //     analogWrite(rPin, 255);
+  //     analogWrite(gPin, 100);
+  //     analogWrite(bPin, 0);
+  //     break;
+  //   case Mode::T: // yellow and green
+  //     analogWrite(rPin, 255);
+  //     analogWrite(gPin, 200);
+  //     analogWrite(bPin, 0);
+  //     break;
+  //   case Mode::B: // no message timeout
+  //     analogWrite(rPin, 0);
+  //     analogWrite(gPin, 0);
+  //     analogWrite(bPin, 255);
+  //     break;
+  //   case Mode::R: // failed checksum
+  //     analogWrite(rPin, 255);
+  //     analogWrite(gPin, 0);
+  //     analogWrite(bPin, 255);
+  //     break;
+  //   default: // unknown error
+  //     printf("Unknown RGB LED mode: %c\n", toChar(mode));
+  //     analogWrite(rPin, 255);
+  //     analogWrite(gPin, 255);
+  //     analogWrite(bPin, 255);
+  //     break;
+  // }
 }

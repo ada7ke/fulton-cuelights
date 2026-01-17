@@ -24,7 +24,6 @@ DeviceRole deviceRole;
 
 DeviceRole autoDetectRole() {
   pinMode(ROLE_DETECT_PIN, INPUT_PULLUP);
-  delay(10); 
 
   if (digitalRead(ROLE_DETECT_PIN) == LOW) {
     return ROLE_CONTROLLER;
@@ -49,12 +48,12 @@ void setup()
   deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
     RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); // (i soldered these wrong)
-    delay(100);
+    delay(10);
     printf("Auto detected role: CONTROLLER\n");
     setupController();
   } else {
     RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
-    delay(100);
+    delay(10);
     printf("Auto detected role: RECEIVER\n");
     setupReceiver();
   }

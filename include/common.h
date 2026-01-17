@@ -43,11 +43,11 @@ extern bool modeR;
 extern bool modeY;
 extern bool modeG;
 
+void pulseActivityLed(uint16_t ms);
+void serviceActivityLed();
+
 char toChar(Mode mode);
 
-// Frame protocol:
-// [FRAME_START, device, red, yellow, green, brightness, crc, FRAME_END]
-// crc is CRC8 over the 5-byte payload: [device, red, yellow, green, brightness]
 inline bool isValidBoolByte(uint8_t byte) { return (byte == 0 || byte == 1); }
 uint8_t crc8(const uint8_t* data, size_t len);
 void sendFrame(const Frame& frame);

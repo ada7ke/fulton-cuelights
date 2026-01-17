@@ -39,16 +39,19 @@ void setupReceiver()
 
 void loopReceiver()
 {
+  serviceActivityLed();
   Frame f;
   if (readFrame(f)) {
       if (f.device == CONTROLLER_ADDRESS &&
           isValidBoolByte(f.red) && isValidBoolByte(f.yellow) && isValidBoolByte(f.green)) {
-        digitalWrite(LED_PIN, LOW);  
+        pulseActivityLed(10);
         lastMessage = millis();
         brightness = f.brightness;
-
         updateLEDs(f.red, f.yellow, f.green);
-
+        if (lastEcho.red != f.red || lastEcho.yellow != f.yellow || lastEcho.green != f.green || lastEcho.brightness != brightness) {
+          lastEcho = { RECEIVER_ADDRESS, f.red, f.yellow, f.green, brightness };
+          sendFrame(lastEcho);
+        }
         lastEcho = { RECEIVER_ADDRESS, f.red, f.yellow, f.green, brightness };
       }
   }
@@ -69,10 +72,6 @@ void loopReceiver()
 
     printf("No message timeout, turning off LEDs\n");
   }
-
-  delay(10);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
 }
 
 void updateLEDs(uint8_t red, uint8_t yellow, uint8_t green) {

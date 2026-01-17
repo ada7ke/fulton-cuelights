@@ -4,6 +4,23 @@
 bool mode_r = false;
 bool last_r = false;
 
+// LED activity pulse
+bool activityPulseActive = false;
+unsigned long activityPulseUntil = 0;
+
+void pulseActivityLed(uint16_t ms = 10) {
+  digitalWrite(LED_PIN, LOW);
+  activityPulseActive = true;
+  activityPulseUntil = millis() + ms;
+}
+
+void serviceActivityLed() {
+  if (activityPulseActive && (long)(millis() - activityPulseUntil) >= 0) {
+    digitalWrite(LED_PIN, HIGH);
+    activityPulseActive = false;
+  }
+}
+
 char toChar(Mode mode) {
   return static_cast<char>(mode);
 }
@@ -81,7 +98,6 @@ bool readFrame(Frame &out)
              buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
       return true;
     }
-    delay(10);
   }
   return false;
 }
