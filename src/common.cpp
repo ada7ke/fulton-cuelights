@@ -44,10 +44,10 @@ void sendFrame(const Frame& frame)
   uint8_t payload[5] = { frame.device, frame.red, frame.yellow, frame.green, frame.brightness };
   uint8_t crc = crc8(payload, 5);
 
-  printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
-         frame.red, frame.yellow, frame.green, frame.brightness);
-  printf("Sending frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
-         payload[0], payload[1], payload[2], payload[3], payload[4], crc);
+  // printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
+  //        frame.red, frame.yellow, frame.green, frame.brightness);
+  // printf("Sending frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
+  //        payload[0], payload[1], payload[2], payload[3], payload[4], crc);
 
   uint8_t raw[8] = {
     FRAME_START,
@@ -92,10 +92,10 @@ bool readFrame(Frame &out)
       out.green = buf[4];
       out.brightness = buf[5];
 
-      printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
-             out.red, out.yellow, out.green, out.brightness);
-      printf("Received frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
-             buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+      // printf("Red: %u, Yellow: %u, Green: %u, Brightness: %u\n",
+             // out.red, out.yellow, out.green, out.brightness);
+      // printf("Received frame: START %02X %02X %02X %02X %02X CRC %02X END\n",
+             // buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
       return true;
     }
   }

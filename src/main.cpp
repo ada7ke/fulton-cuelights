@@ -1,10 +1,6 @@
 /* TODO:
  - red button
- - receiver echo
- - mode 2
- - long button press features
-    * yellow: brightness
-    * green: modes
+ - mode 3
 */
 
 #include <Arduino.h>

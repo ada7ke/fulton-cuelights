@@ -24,8 +24,8 @@ struct ButtonState {
 
 static ButtonState btn;
 
-static const uint8_t brightnessOptions[] = { 1, 5, 10, 15 };
-static uint8_t brightnessIndex = 1; // default to 5
+static const uint8_t brightnessOptions[] = { 5, 15 , 30};
+static uint8_t brightnessIndex = 1; // default to 15
 static uint8_t mode2Mask = 0; // bit0=yellow, bit1=green
 
 void setupController() {
@@ -46,9 +46,9 @@ void loopController() {
 
   if (btn.gLong) {
     btn.gLong = false;
-    systemMode = (systemMode == 1) ? 2 : 1;
+    systemMode = (systemMode % 3) + 1;
     printf("System mode changed to: %d\n", systemMode);
-    ledBlink(systemMode); // blue blink 1 or 2 times
+    ledBlink(systemMode);
     lastActivity = millis();
   }
   if (btn.yLong) {
@@ -61,15 +61,17 @@ void loopController() {
 
   if (systemMode == 1) {
     mode1();
-  } else {
+  } else if (systemMode == 2) {
     mode2();
+  } else {
+    mode3();
   }
 
   while (RFSerial.available()) {
     Frame f;
     if (readFrame(f) && f.device == RECEIVER_ADDRESS) {
       updateRGBLED(f.red, f.yellow, f.green, 0);
-      printf("Receiver echo R:%u Y:%u G:%u Brightness:%u\n", f.red, f.yellow, f.green, f.brightness);
+      // printf("Receiver echo R:%u Y:%u G:%u Brightness:%u\n", f.red, f.yellow, f.green, f.brightness);
     }
   }
 }
@@ -109,6 +111,7 @@ void mode1() {
 
   sendCurrentState(red, yellow, green);
   if (stateChanged) {
+    printf("Mode1 state changed to R:%u Y:%u G:%u    |||   ", red, yellow, green);
     sendCommand(red, yellow, green);
     lastActivity = millis();
   }
@@ -117,8 +120,6 @@ void mode1() {
 void mode2() {
   stateChanged = false;
 
-  // Mode 2 uses toggle-on-press; add a short lockout to prevent switch bounce
-  // from generating multiple press edges and toggling back immediately.
   static unsigned long yToggleLockoutUntil = 0;
   static unsigned long gToggleLockoutUntil = 0;
   static const unsigned long toggleDebounceMs = 200;
@@ -157,6 +158,31 @@ void mode2() {
   }
 }
 
+void mode3() {
+  static bool lastR = false;
+  static bool lastY = false;
+  static bool lastG = false;
+
+  const bool rNow = btn.r;
+  const bool yNow = btn.y;
+  const bool gNow = btn.g;
+
+  const uint8_t red = rNow ? 1 : 0;
+  const uint8_t yellow = yNow ? 1 : 0;
+  const uint8_t green = gNow ? 1 : 0;
+
+  stateChanged = (rNow != lastR) || (yNow != lastY) || (gNow != lastG);
+
+  sendCurrentState(red, yellow, green);
+  if (stateChanged) {
+    sendCommand(red, yellow, green);
+    lastActivity = millis();
+    lastR = rNow;
+    lastY = yNow;
+    lastG = gNow;
+  }
+}
+
 void ledBlink(int times) {
   for (int i = 0; i < times; ++i) {
     updateRGBLED(0, 0, 0, 1);
@@ -187,6 +213,7 @@ void detectButtonChange() {
   btn.r = (digitalRead(rButtonPin) == LOW);
   btn.y = (digitalRead(yButtonPin) == LOW);
   btn.g = (digitalRead(gButtonPin) == LOW);
+  // printf("Buttons state R:%d Y:%d G:%d\n", btn.r, btn.y, btn.g);m
 
   if (btn.r && !lastR) btn.rPressed = true;
   if (btn.y && !lastY) btn.yPressed = true;
@@ -205,7 +232,6 @@ void detectButtonChange() {
     btn.yLong = true;
     yLongHandled = true;
   }
-
   // green long hold 
   if (btn.g && !lastG) {
     gPressStart = millis();
@@ -237,7 +263,7 @@ void sendCommand(uint8_t red, uint8_t yellow, uint8_t green) {
   pulseActivityLed(10);
   Frame frame = { CONTROLLER_ADDRESS, red, yellow, green, brightnessOptions[brightnessIndex] };
   sendFrame(frame);
-  printf("Sent state R:%u Y:%u G:%u\n", red, yellow, green);
+  // printf("Sent state R:%u Y:%u G:%u\n", red, yellow, green);
 }
 
 void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue)
@@ -259,7 +285,7 @@ void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue)
       analogWrite(rPin, 255);
       analogWrite(gPin, 100);
       analogWrite(bPin, 0);
-    } else if (systemMode == 2) {
+    } else if (systemMode == 2 || systemMode == 3) {
       analogWrite(rPin, 255);
       analogWrite(gPin, 0);
       analogWrite(bPin, 0);

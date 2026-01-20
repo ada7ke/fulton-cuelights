@@ -9,6 +9,7 @@ void setupController();
 void loopController();
 void mode1();
 void mode2();
+void mode3();
 void ledBlink(int times);
 void detectButtonChange();
 void sendCurrentState(uint8_t red, uint8_t yellow, uint8_t green);
