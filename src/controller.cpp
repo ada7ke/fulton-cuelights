@@ -24,9 +24,14 @@ struct ButtonState {
 
 static ButtonState btn;
 
-static const uint8_t brightnessOptions[] = { 5, 15 , 30};
+static const uint8_t brightnessOptions[] = { 5, 15, 30 };
 static uint8_t brightnessIndex = 1; // default to 15
 static uint8_t mode2Mask = 0; // bit0=yellow, bit1=green
+
+static constexpr size_t brightnessOptionsCount = sizeof(brightnessOptions) / sizeof(brightnessOptions[0]);
+static constexpr unsigned long mode2ToggleDebounceMs = 200;
+
+static inline uint8_t boolToByte(bool v) { return v ? 1 : 0; }
 
 void setupController() {
   randomSeed(micros());
@@ -44,29 +49,45 @@ void loopController() {
   serviceActivityLed();
   detectButtonChange();
 
+  handleControllerShortcuts();
+  runSystemMode();
+  processReceiverEcho();
+}
+
+void cycleBrightness() {
+  brightnessIndex = (brightnessIndex + 1) % brightnessOptionsCount;
+  printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
+  ledBlink(static_cast<int>(brightnessIndex) + 1);
+  stateChanged = true;
+}
+
+void cycleSystemMode() {
+  systemMode = (systemMode % 3) + 1;
+  printf("System mode changed to: %d\n", systemMode);
+  ledBlink(systemMode);
+  lastActivity = millis();
+}
+
+void handleControllerShortcuts() {
   if (btn.gLong) {
     btn.gLong = false;
-    systemMode = (systemMode % 3) + 1;
-    printf("System mode changed to: %d\n", systemMode);
-    ledBlink(systemMode);
-    lastActivity = millis();
+    cycleSystemMode();
   }
   if (btn.yLong) {
     btn.yLong = false;
-    brightnessIndex = (brightnessIndex + 1) % (sizeof(brightnessOptions) / sizeof(brightnessOptions[0]));
-    printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
-    ledBlink(brightnessIndex + 1);
-    stateChanged = true;
+    cycleBrightness();
   }
+}
 
-  if (systemMode == 1) {
-    mode1();
-  } else if (systemMode == 2) {
-    mode2();
-  } else {
-    mode3();
+void runSystemMode() {
+  switch (systemMode) {
+    case 1: mode1(); break;
+    case 2: mode2(); break;
+    default: mode3(); break;
   }
+}
 
+void processReceiverEcho() {
   while (RFSerial.available()) {
     Frame f;
     if (readFrame(f) && f.device == RECEIVER_ADDRESS) {
@@ -74,6 +95,46 @@ void loopController() {
       // printf("Receiver echo R:%u Y:%u G:%u Brightness:%u\n", f.red, f.yellow, f.green, f.brightness);
     }
   }
+}
+
+bool handleMode2TogglePress(bool &pressedFlag, unsigned long &lockoutUntil, uint8_t bitMask) {
+  if (!pressedFlag) return false;
+  pressedFlag = false;
+
+  if ((long)(millis() - lockoutUntil) < 0) return false;
+  mode2Mask ^= bitMask;
+  lockoutUntil = millis() + mode2ToggleDebounceMs;
+  return true;
+}
+
+void updateEdgeAndOptionalLongHold(
+  bool now,
+  bool &last,
+  bool &pressedEvent,
+  unsigned long *pressStart,
+  bool *longHandled,
+  bool *longEvent
+) {
+  pressedEvent = (now && !last);
+
+  if (pressStart && longHandled && longEvent) {
+    if (now && !last) {
+      *pressStart = millis();
+      *longHandled = false;
+    }
+
+    if (!now && last) {
+      *pressStart = 0;
+      *longHandled = false;
+    }
+
+    if (now && *pressStart != 0 && !*longHandled && (millis() - *pressStart >= longHoldDuration)) {
+      *longEvent = true;
+      *longHandled = true;
+    }
+  }
+
+  last = now;
 }
 
 void mode1() {
@@ -105,9 +166,9 @@ void mode1() {
     lastActivity = millis();
   }
 
-  uint8_t red = mode_r ? 1 : 0;
-  uint8_t yellow = (currentMode == Mode::Y) ? 1 : 0;
-  uint8_t green = (currentMode == Mode::G) ? 1 : 0;
+  const uint8_t red = boolToByte(mode_r);
+  const uint8_t yellow = boolToByte(currentMode == Mode::Y);
+  const uint8_t green = boolToByte(currentMode == Mode::G);
 
   sendCurrentState(red, yellow, green);
   if (stateChanged) {
@@ -122,34 +183,13 @@ void mode2() {
 
   static unsigned long yToggleLockoutUntil = 0;
   static unsigned long gToggleLockoutUntil = 0;
-  static const unsigned long toggleDebounceMs = 200;
 
-  if (btn.yPressed) {
-    btn.yPressed = false;
-    if ((long)(millis() - yToggleLockoutUntil) >= 0) {
-      mode2Mask ^= 0x01;
-      stateChanged = true;
-      yToggleLockoutUntil = millis() + toggleDebounceMs;
-    }
-  }
-  if (btn.gPressed) {
-    btn.gPressed = false;
-    if ((long)(millis() - gToggleLockoutUntil) >= 0) {
-      mode2Mask ^= 0x02;
-      stateChanged = true;
-      gToggleLockoutUntil = millis() + toggleDebounceMs;
-    }
-  }
+  stateChanged |= handleMode2TogglePress(btn.yPressed, yToggleLockoutUntil, 0x01);
+  stateChanged |= handleMode2TogglePress(btn.gPressed, gToggleLockoutUntil, 0x02);
 
-  // static bool lastRedLatch = false;
-  // if (btn.r != lastRedLatch) {
-  //   lastRedLatch = btn.r;
-  //   stateChanged = true;
-  // }
-
-  uint8_t red = btn.r ? 1 : 0;
-  uint8_t yellow = (mode2Mask & 0x01) ? 1 : 0;
-  uint8_t green = (mode2Mask & 0x02) ? 1 : 0;
+  const uint8_t red = boolToByte(btn.r);
+  const uint8_t yellow = boolToByte(mode2Mask & 0x01);
+  const uint8_t green = boolToByte(mode2Mask & 0x02);
 
   sendCurrentState(red, yellow, green);
   if (stateChanged) {
@@ -167,9 +207,9 @@ void mode3() {
   const bool yNow = btn.y;
   const bool gNow = btn.g;
 
-  const uint8_t red = rNow ? 1 : 0;
-  const uint8_t yellow = yNow ? 1 : 0;
-  const uint8_t green = gNow ? 1 : 0;
+  const uint8_t red = boolToByte(rNow);
+  const uint8_t yellow = boolToByte(yNow);
+  const uint8_t green = boolToByte(gNow);
 
   stateChanged = (rNow != lastR) || (yNow != lastY) || (gNow != lastG);
 
@@ -215,40 +255,9 @@ void detectButtonChange() {
   btn.g = (digitalRead(gButtonPin) == LOW);
   // printf("Buttons state R:%d Y:%d G:%d\n", btn.r, btn.y, btn.g);m
 
-  if (btn.r && !lastR) btn.rPressed = true;
-  if (btn.y && !lastY) btn.yPressed = true;
-  if (btn.g && !lastG) btn.gPressed = true;
-
-  // yellow long hold
-  if (btn.y && !lastY) {
-    yPressStart = millis();
-    yLongHandled = false;
-  }
-  if (!btn.y && lastY) {
-    yPressStart = 0;
-    yLongHandled = false;
-  }
-  if (btn.y && yPressStart != 0 && !yLongHandled && (millis() - yPressStart >= longHoldDuration)) {
-    btn.yLong = true;
-    yLongHandled = true;
-  }
-  // green long hold 
-  if (btn.g && !lastG) {
-    gPressStart = millis();
-    gLongHandled = false;
-  }
-  if (!btn.g && lastG) {
-    gPressStart = 0;
-    gLongHandled = false;
-  }
-  if (btn.g && gPressStart != 0 && !gLongHandled && (millis() - gPressStart >= longHoldDuration)) {
-    btn.gLong = true;
-    gLongHandled = true;
-  }
-
-  lastR = btn.r;
-  lastY = btn.y;
-  lastG = btn.g;
+  updateEdgeAndOptionalLongHold(btn.r, lastR, btn.rPressed, nullptr, nullptr, nullptr);
+  updateEdgeAndOptionalLongHold(btn.y, lastY, btn.yPressed, &yPressStart, &yLongHandled, &btn.yLong);
+  updateEdgeAndOptionalLongHold(btn.g, lastG, btn.gPressed, &gPressStart, &gLongHandled, &btn.gLong);
 }
 
 void sendCurrentState(uint8_t red, uint8_t yellow, uint8_t green) {
@@ -266,76 +275,29 @@ void sendCommand(uint8_t red, uint8_t yellow, uint8_t green) {
   // printf("Sent state R:%u Y:%u G:%u\n", red, yellow, green);
 }
 
-void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue)
-{  
+void setRgb(uint8_t red, uint8_t green, uint8_t blue) {
+  analogWrite(rPin, red);
+  analogWrite(gPin, green);
+  analogWrite(bPin, blue);
+}
+
+void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue) {
   if (blue) {
-    analogWrite(rPin, 0);
-    analogWrite(gPin, 0);
-    analogWrite(bPin, 255);
+    setRgb(0, 0, 255);
   } else if (yellow && green) {
-    analogWrite(rPin, 255);
-    analogWrite(gPin, 200);
-    analogWrite(bPin, 0);
+    setRgb(255, 200, 0);
   } else if (green) {
-    analogWrite(rPin, 0);
-    analogWrite(gPin, 255);
-    analogWrite(bPin, 0);
+    setRgb(0, 255, 0);
   } else if (yellow) {
     if (systemMode == 1) {
-      analogWrite(rPin, 255);
-      analogWrite(gPin, 100);
-      analogWrite(bPin, 0);
-    } else if (systemMode == 2 || systemMode == 3) {
-      analogWrite(rPin, 255);
-      analogWrite(gPin, 0);
-      analogWrite(bPin, 0);
+      setRgb(255, 100, 0);
+    } else {
+      // systemMode 2/3: map yellow to red
+      setRgb(255, 0, 0);
     }
   } else if (red) {
-    analogWrite(rPin, 255);
-    analogWrite(gPin, 0);
-    analogWrite(bPin, 255);
+    setRgb(255, 0, 255);
   } else {
-    analogWrite(rPin, 0);
-    analogWrite(gPin, 0);
-    analogWrite(bPin, 0);
+    setRgb(0, 0, 0);
   }
-  // switch (mode)
-  // {
-  //   case Mode::X: // sleep
-  //     analogWrite(rPin, 0);
-  //     analogWrite(gPin, 0);
-  //     analogWrite(bPin, 0);
-  //     break;
-  //   case Mode::G: // green
-  //     analogWrite(rPin, 0);
-  //     analogWrite(gPin, 255);
-  //     analogWrite(bPin, 0);
-  //     break;
-  //   case Mode::Y: // yellow
-  //     analogWrite(rPin, 255);
-  //     analogWrite(gPin, 100);
-  //     analogWrite(bPin, 0);
-  //     break;
-  //   case Mode::T: // yellow and green
-  //     analogWrite(rPin, 255);
-  //     analogWrite(gPin, 200);
-  //     analogWrite(bPin, 0);
-  //     break;
-  //   case Mode::B: // no message timeout
-  //     analogWrite(rPin, 0);
-  //     analogWrite(gPin, 0);
-  //     analogWrite(bPin, 255);
-  //     break;
-  //   case Mode::R: // failed checksum
-  //     analogWrite(rPin, 255);
-  //     analogWrite(gPin, 0);
-  //     analogWrite(bPin, 255);
-  //     break;
-  //   default: // unknown error
-  //     printf("Unknown RGB LED mode: %c\n", toChar(mode));
-  //     analogWrite(rPin, 255);
-  //     analogWrite(gPin, 255);
-  //     analogWrite(bPin, 255);
-  //     break;
-  // }
 }
