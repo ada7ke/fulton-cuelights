@@ -25,6 +25,7 @@ char toChar(Mode mode) {
   return static_cast<char>(mode);
 }
 
+// crc-8 calculation (polynomial 0x07)
 uint8_t crc8(const uint8_t* data, size_t len) {
   uint8_t crc = 0x00;
   for (size_t i = 0; i < len; i++) {
@@ -39,6 +40,7 @@ uint8_t crc8(const uint8_t* data, size_t len) {
   return crc;
 }
 
+// send framed messages w crc
 void sendFrame(const Frame& frame)
 {
   uint8_t payload[5] = { frame.device, frame.red, frame.yellow, frame.green, frame.brightness };
@@ -63,6 +65,7 @@ void sendFrame(const Frame& frame)
   RFSerial.write(raw, 8);
 }
 
+// read framed messages w crc
 bool readFrame(Frame &out)
 {
   static uint8_t state = 0;

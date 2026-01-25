@@ -24,8 +24,6 @@ struct Frame {
   uint8_t brightness;
 };
 
-inline constexpr unsigned long longHoldDuration = 3000UL;
-
 extern bool mode_r;
 extern bool last_r;
 enum class Mode : uint8_t

@@ -1,14 +1,10 @@
-/* TODO:
- - red button
- - mode 3
-*/
-
 #include <Arduino.h>
 #include "receiver.h"
 #include "controller.h"
 #include "common.h"
 #include "WifiAP.hpp"
 
+// ground pin for controller
 #define ROLE_DETECT_PIN 5
 
 enum DeviceRole {
@@ -41,9 +37,10 @@ void setup()
   pinMode(bPin, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
 
+  // detect device type
   deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
-    RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); // (i soldered these wrong)
+    RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
     delay(10);
     printf("Auto detected role: CONTROLLER\n");
     setupController();
@@ -61,6 +58,7 @@ void loop()
   // ElegantOTA.loop();
   // dnsServer.processNextRequest();
   
+  // run loop according to device type
   if (deviceRole == ROLE_CONTROLLER) {
     loopController();
   } else {
