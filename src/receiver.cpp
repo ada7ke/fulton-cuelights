@@ -6,26 +6,26 @@ const int freq = 5000;
 const int res = 8;
 static uint8_t brightness = 15;
 const int redChannel = 0;
-const int yellowChannel = 1;
-const int greenChannel = 2;
+const int greenChannel = 1;
+const int blueChannel = 2;
+
 
 
 static unsigned long lastMessage = 0;
 static Frame lastEcho = { RECEIVER_ADDRESS, 0, 0, 0, brightness };
 static unsigned long lastSend = 0;
-static unsigned long sendInterval = 500;
 
 void setupReceiver()
 {
   randomSeed(micros());
 
   ledcSetup(redChannel, freq, res);
-  ledcSetup(yellowChannel, freq, res);
   ledcSetup(greenChannel, freq, res);
+  ledcSetup(blueChannel, freq, res);
 
   ledcAttachPin(redLED, redChannel);
-  ledcAttachPin(yellowLED, yellowChannel);
   ledcAttachPin(greenLED, greenChannel);
+  ledcAttachPin(blueLED, blueChannel);
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -48,20 +48,35 @@ void loopReceiver()
 
 // process incoming command frames
 void processCommand() {
-  Frame f;
-  if (readFrame(f)) {
-      if (f.device == CONTROLLER_ADDRESS &&
-          isValidBoolByte(f.red) && isValidBoolByte(f.yellow) && isValidBoolByte(f.green)) {
-        pulseActivityLed(10);
-        lastMessage = millis();
-        brightness = f.brightness;
-        updateLEDs(f.red, f.yellow, f.green);
-        if (lastEcho.red != f.red || lastEcho.yellow != f.yellow || lastEcho.green != f.green || lastEcho.brightness != brightness) {
-          lastEcho = { RECEIVER_ADDRESS, f.red, f.yellow, f.green, brightness };
-          sendFrame(lastEcho);
+  while (RFSerial.available()) {
+    Frame f;
+    if (readFrame(f)) {
+      if (f.device == CONTROLLER_ADDRESS) {
+        if (isValidBoolByte(f.red) && isValidBoolByte(f.green) && isValidBoolByte(f.blue)) {
+          // valid frame - update leds and send echo
+          pulseActivityLed(10);
+          lastMessage = millis();
+          brightness = f.brightness;
+          updateLEDs(f.red, f.green, f.blue);
+          // send echo only if state changed
+          if (lastEcho.red != f.red || lastEcho.green != f.green || lastEcho.blue != f.blue || lastEcho.brightness != brightness) {
+            lastEcho = { RECEIVER_ADDRESS, f.red, f.green, f.blue, brightness };
+            sendFrame(lastEcho);
+          }
+          lastEcho = { RECEIVER_ADDRESS, f.red, f.green, f.blue, brightness };
+        } else {
+          // send error frame with invalid values (2 = error indicator)
+          printf("Error: Invalid color values in frame\n");
+          Frame errorFrame = { RECEIVER_ADDRESS, 2, 2, 2, brightness };
+          sendFrame(errorFrame);
         }
-        lastEcho = { RECEIVER_ADDRESS, f.red, f.yellow, f.green, brightness };
       }
+    } else {
+      // send error frame on CRC/read failure
+      printf("Error: Failed to read frame\n");
+      Frame errorFrame = { RECEIVER_ADDRESS, 2, 2, 2, brightness };
+      sendFrame(errorFrame);
+    }
   }
 }
 
@@ -88,18 +103,18 @@ void timeoutReceiver() {
 }
 
 // update led states
-void updateLEDs(uint8_t red, uint8_t yellow, uint8_t green) {
-  auto setLEDs = [](uint8_t r, uint8_t y, uint8_t g) {
+void updateLEDs(uint8_t red, uint8_t green, uint8_t blue) {
+  auto setLEDs = [](uint8_t r, uint8_t g, uint8_t b) {
     ledcWrite(redChannel, r);
-    ledcWrite(yellowChannel, y);
     ledcWrite(greenChannel, g);
+    ledcWrite(blueChannel, b);
   };
 
   uint8_t r = red ? brightness : 0;
-  uint8_t y = yellow ? brightness : 0;
   uint8_t g = green ? brightness : 0;
+  uint8_t b = blue ? brightness : 0;
 
-  setLEDs(r, y, g);
-  printf("Updated LEDs - Brightness: %u | R: %u, Y: %u, G: %u\n", brightness, r, y, g);
+  setLEDs(r, g, b);
+  printf("Updated LEDs - Brightness: %u | R: %u, G: %u, B: %u\n", brightness, r, g, b);
 }
 

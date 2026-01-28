@@ -19,32 +19,15 @@
 struct Frame {
   uint8_t device;
   uint8_t red;
-  uint8_t yellow;
   uint8_t green;
+  uint8_t blue;
   uint8_t brightness;
 };
 
-extern bool mode_r;
-extern bool last_r;
-enum class Mode : uint8_t
-{
-  X = 'X', // sleep
-  Y = 'Y', // yellow
-  G = 'G', // green
-  T = 'T', // yellow and green
-  R = 'R', // failed checksum
-  B = 'B', // no message timeout
-  W = 'W' // unknown error
-};
-
-extern bool modeR;
-extern bool modeY;
-extern bool modeG;
+extern unsigned long sendInterval;
 
 void pulseActivityLed(uint16_t ms);
 void serviceActivityLed();
-
-char toChar(Mode mode);
 
 inline bool isValidBoolByte(uint8_t byte) { return (byte == 0 || byte == 1); }
 uint8_t crc8(const uint8_t* data, size_t len);

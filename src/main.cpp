@@ -4,16 +4,13 @@
 #include "common.h"
 #include "WifiAP.hpp"
 
-// ground pin for controller
+// detect device based on pin state
 #define ROLE_DETECT_PIN 5
-
 enum DeviceRole {
   ROLE_CONTROLLER,
   ROLE_RECEIVER
 };
-
 DeviceRole deviceRole;
-
 DeviceRole autoDetectRole() {
   pinMode(ROLE_DETECT_PIN, INPUT_PULLUP);
 
@@ -30,7 +27,8 @@ void setup()
   delay(1000);
   Serial.flush();
 
-  // setup_wifi(); disabled ota
+  // uncomment to enable ota
+  // setup_wifi();
 
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
@@ -54,6 +52,7 @@ void setup()
 
 void loop()
 {
+  // uncomment to enable ota
   // ArduinoOTA.handle();
   // ElegantOTA.loop();
   // dnsServer.processNextRequest();

@@ -2,48 +2,57 @@
 #include "controller.h"
 #include "common.h"
 
-// setup modes
+// init
 int systemMode = 1;
-static Mode currentMode = Mode::X;
-bool stateChanged = false;
 
-// setup rf vars
 static unsigned long lastSend = 0;
-static unsigned long sendInterval = 500;
 static unsigned long lastActivity = 0;
 static unsigned long sleepTimer = 5000;
 
-// setup button detections
 struct ButtonState {
   bool r = false;
-  bool y = false;
+  bool b = false;
   bool g = false;
   bool rPressed = false;
-  bool yPressed = false;
+  bool bPressed = false;
   bool gPressed = false;
-  bool yLong = false;
+  bool bLong = false;
   bool gLong = false;
+  bool rLong = false;
 };
 static ButtonState btn;
 
+bool stateChanged = false;
 static constexpr unsigned long longHoldDuration = 3000UL;
 static const uint8_t brightnessOptions[] = { 5, 15, 30 };
-static uint8_t brightnessIndex = 1; // default to 15
-static uint8_t mode2Mask = 0; // bit0=yellow, bit1=green
-
+static uint8_t brightnessIndex = 1;
 static constexpr size_t brightnessOptionsCount = sizeof(brightnessOptions) / sizeof(brightnessOptions[0]);
 static constexpr unsigned long mode2ToggleDebounceMs = 200;
 
+static uint8_t colorStateMask = 0;
+static constexpr uint8_t BLUE_BIT = 0x01;
+static constexpr uint8_t GREEN_BIT = 0x02;
+static constexpr uint8_t RED_BIT = 0x04;
+
+static bool blinking = false;
+static unsigned int cyclesElapsed = 0;
+
 static inline uint8_t boolToByte(bool v) { return v ? 1 : 0; }
+
+static inline void getColorStates(uint8_t &red, uint8_t &blue, uint8_t &green) {
+  red = boolToByte(colorStateMask & RED_BIT);
+  blue = boolToByte(colorStateMask & BLUE_BIT);
+  green = boolToByte(colorStateMask & GREEN_BIT);
+}
 
 void setupController() {
   randomSeed(micros());
 
   pinMode(rButtonPin, INPUT_PULLUP);
-  pinMode(yButtonPin, INPUT_PULLUP);
+  pinMode(bButtonPin, INPUT_PULLUP);
   pinMode(gButtonPin, INPUT_PULLUP);
 
-  updateRGBLED(0, 0, 0, 0);
+  updateRGBLED(0, 0, 0);
   digitalWrite(LED_PIN, HIGH);
   lastActivity = millis();
 }
@@ -55,44 +64,129 @@ void loopController() {
   handleControllerShortcuts();
   runSystemMode();
   processEcho();
+  errorBlink();
 }
 
-// blink blue led on long hold button events
-void ledBlink(int times) {
+// toggle color bit with debounce
+bool toggleColorBit(bool &pressedFlag, unsigned long &lockoutUntil, uint8_t bitMask) {
+  // ignore if button not pressed
+  if (!pressedFlag) return false;
+  pressedFlag = false;  
+  // ignore if within debounce lockout period
+  if ((long)(millis() - lockoutUntil) < 0) return false;
+
+  // toggle the corresponding bit in colorStateMask
+  colorStateMask ^= bitMask;
+
+  lockoutUntil = millis() + mode2ToggleDebounceMs;
+  return true;
+}
+
+// update button events and long-press detection
+void updateButtonEvents(bool now, bool &last, 
+                        bool &pressedEvent, unsigned long *pressStart, 
+                        bool *longHandled, bool *longEvent) {
+  pressedEvent = (now && !last);
+
+  // long-press detection
+  if (pressStart && longHandled && longEvent) {
+    // on button press: record start time and reset long press flag
+    if (now && !last) {
+      *pressStart = millis();
+      *longHandled = false;
+    }
+    // on button release: clear start time and reset long press flag
+    if (!now && last) {
+      *pressStart = 0;
+      *longHandled = false;
+    }
+    // check for long press
+    if (now && *pressStart != 0 && !*longHandled && (millis() - *pressStart >= longHoldDuration)) {
+      *longEvent = true;
+      *longHandled = true;
+    }
+  }
+
+  last = now;
+}
+
+// handle button state changes and long-press detection
+void detectButtonChange() {
+  static bool lastR = false;
+  static bool lastB = false;
+  static bool lastG = false;
+
+  static unsigned long rPressStart = 0;
+  static bool rLongHandled = false;
+
+  static unsigned long gPressStart = 0;
+  static bool gLongHandled = false;
+
+  static unsigned long bPressStart = 0;
+  static bool bLongHandled = false;
+
+  btn.rPressed = false;
+  btn.gPressed = false;
+  btn.bPressed = false;
+  btn.rLong = false;
+  btn.gLong = false;
+  btn.bLong = false;
+
+  btn.r = (digitalRead(rButtonPin) == LOW);
+  btn.g = (digitalRead(gButtonPin) == LOW);
+  btn.b = (digitalRead(bButtonPin) == LOW);
+  
+  // printf("Buttons state R:%d B:%d G:%d\n", btn.r, btn.b, btn.g);
+
+  updateButtonEvents(btn.r, lastR, btn.rPressed, &rPressStart, &rLongHandled, &btn.rLong);
+  updateButtonEvents(btn.g, lastG, btn.gPressed, &gPressStart, &gLongHandled, &btn.gLong);
+  updateButtonEvents(btn.b, lastB, btn.bPressed, &bPressStart, &bLongHandled, &btn.bLong);
+}
+
+// handle long hold actions
+void handleControllerShortcuts() {
+  // hold red + green to change system mode
+  if (btn.rLong && btn.gLong) {
+    btn.rLong = false;
+    btn.gLong = false;
+    cycleSystemMode();
+  }
+
+  // hold red + blue to change led brightness
+  if (btn.rLong && btn.bLong) {
+    btn.rLong = false;
+    btn.bLong = false;
+    cycleBrightness();
+  }
+}
+
+// blink yellow rgb led on long hold button events
+void modeBlink(int times) {
   for (int i = 0; i < times; ++i) {
-    updateRGBLED(0, 0, 0, 1);
+    blinking = true;
+    updateRGBLED(1, 1, 0);
     delay(200);
-    updateRGBLED(0, 0, 0, 0);
+    updateRGBLED(0, 0, 0);
     delay(150);
   }
+  blinking = false;
 }
 
 // cycle between led brightness levels
 void cycleBrightness() {
   brightnessIndex = (brightnessIndex + 1) % brightnessOptionsCount;
   printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
-  ledBlink(static_cast<int>(brightnessIndex) + 1);
+  modeBlink(static_cast<int>(brightnessIndex) + 1);
   stateChanged = true;
+  lastActivity = millis();
 }
 
 // cycle between system modes 1, 2, and 3
 void cycleSystemMode() {
   systemMode = (systemMode % 3) + 1;
   printf("System mode changed to: %d\n", systemMode);
-  ledBlink(systemMode);
+  modeBlink(systemMode);
   lastActivity = millis();
-}
-
-// handle long hold actions
-void handleControllerShortcuts() {
-  if (btn.gLong) {
-    btn.gLong = false;
-    cycleSystemMode();
-  }
-  if (btn.yLong) {
-    btn.yLong = false;
-    cycleBrightness();
-  }
 }
 
 void runSystemMode() {
@@ -103,222 +197,142 @@ void runSystemMode() {
   }
 }
 
-// display receiver echo states on controller rgb led
-void processEcho() {
-  while (RFSerial.available()) {
-    Frame f;
-    if (readFrame(f) && f.device == RECEIVER_ADDRESS) {
-      updateRGBLED(f.red, f.yellow, f.green, 0);
-      // printf("Receiver echo R:%u Y:%u G:%u Brightness:%u\n", f.red, f.yellow, f.green, f.brightness);
-    }
-  }
-}
-
-// mode 2 toggle with debounce
-bool mode2Toggle(bool &pressedFlag, unsigned long &lockoutUntil, uint8_t bitMask) {
-  if (!pressedFlag) return false;
-  pressedFlag = false;
-
-  if ((long)(millis() - lockoutUntil) < 0) return false;
-  mode2Mask ^= bitMask;
-  lockoutUntil = millis() + mode2ToggleDebounceMs;
-  return true;
-}
-
-// update button events and long-press detection
-void updateButtonEvents(
-  bool now,
-  bool &last,
-  bool &pressedEvent,
-  unsigned long *pressStart,
-  bool *longHandled,
-  bool *longEvent
-) {
-  pressedEvent = (now && !last);
-
-  if (pressStart && longHandled && longEvent) {
-    if (now && !last) {
-      *pressStart = millis();
-      *longHandled = false;
-    }
-
-    if (!now && last) {
-      *pressStart = 0;
-      *longHandled = false;
-    }
-
-    if (now && *pressStart != 0 && !*longHandled && (millis() - *pressStart >= longHoldDuration)) {
-      *longEvent = true;
-      *longHandled = true;
-    }
-  }
-
-  last = now;
-}
-
-// mode 1: swap between yellow and green modes. red runs independently
+// mode 1: single color mode - pressing a button selects that color exclusively
 void mode1() {
   stateChanged = false;
 
-  // handle button presses
-  if (btn.gPressed) {
-    btn.gPressed = false;
-    if (currentMode != Mode::G) {
-      currentMode = Mode::G;
-      stateChanged = true;
-    }
-  } else if (btn.yPressed) {
-    btn.yPressed = false;
-    if (currentMode != Mode::Y) {
-      currentMode = Mode::Y;
-      stateChanged = true;
-    }
-  }
-
+  // check for button presses and set corresponding color bit 
   if (btn.rPressed) {
     btn.rPressed = false;
-    mode_r = !mode_r;
-    stateChanged = true;
-  }
+    if (colorStateMask != RED_BIT) {
+      colorStateMask = RED_BIT;
+      stateChanged = true;
+      lastActivity = millis();
+    }
+  } else if (btn.gPressed) {
+    btn.gPressed = false; 
+    if (colorStateMask != GREEN_BIT) {
+      colorStateMask = GREEN_BIT;
+      stateChanged = true;
+      lastActivity = millis();
+    }
+  } else if (btn.bPressed) {
+    btn.bPressed = false; 
+    if (colorStateMask != BLUE_BIT) {
+      colorStateMask = BLUE_BIT;
+      stateChanged = true;
+      lastActivity = millis();
+    }
+  } 
 
-  // auto-sleep after 5 seconds inactivity
-  if (millis() - lastActivity >= sleepTimer && currentMode != Mode::X) {
-    currentMode = Mode::X;
+  // auto-sleep after 5 seconds of no activity
+  if (millis() - lastActivity >= sleepTimer && colorStateMask != 0) {
+    colorStateMask = 0;
     lastActivity = millis();
   }
 
-  // send led state if changed
-  const uint8_t red = boolToByte(mode_r);
-  const uint8_t yellow = boolToByte(currentMode == Mode::Y);
-  const uint8_t green = boolToByte(currentMode == Mode::G);
-
-  sendCurrentState(red, yellow, green);
-  if (stateChanged) {
-    printf("Mode1 state changed to R:%u Y:%u G:%u ", red, yellow, green);
-    sendCommand(red, yellow, green);
-    lastActivity = millis();
-  }
+  sendCurrentState();
 }
 
-// mode 2: all colors toggle independently
+// mode 2: independent toggle - each button toggles its color on/off
 void mode2() {
   stateChanged = false;
 
-  static unsigned long yToggleLockoutUntil = 0;
+  // debounce timers
+  static unsigned long rToggleLockoutUntil = 0;
   static unsigned long gToggleLockoutUntil = 0;
+  static unsigned long bToggleLockoutUntil = 0;
 
-  stateChanged |= mode2Toggle(btn.yPressed, yToggleLockoutUntil, 0x01);
-  stateChanged |= mode2Toggle(btn.gPressed, gToggleLockoutUntil, 0x02);
+  // attempt to toggle each color independently with debounce protection
+  stateChanged |= toggleColorBit(btn.rPressed, rToggleLockoutUntil, RED_BIT);
+  stateChanged |= toggleColorBit(btn.gPressed, gToggleLockoutUntil, GREEN_BIT);
+  stateChanged |= toggleColorBit(btn.bPressed, bToggleLockoutUntil, BLUE_BIT);
 
-  const uint8_t red = boolToByte(btn.r);
-  const uint8_t yellow = boolToByte(mode2Mask & 0x01);
-  const uint8_t green = boolToByte(mode2Mask & 0x02);
-
-  // send led state if changed
-  sendCurrentState(red, yellow, green);
-  if (stateChanged) {
-    sendCommand(red, yellow, green);
-    lastActivity = millis();
-  }
+  sendCurrentState();
 }
 
-// mode 3: leds on while button is held
+// mode 3: hold to activate - led is on while button is held, off when released
 void mode3() {
-  static bool lastR = false;
-  static bool lastY = false;
-  static bool lastG = false;
+  const uint8_t newStateMask = 
+    (btn.r ? RED_BIT : 0) | 
+    (btn.g ? GREEN_BIT : 0) | 
+    (btn.b ? BLUE_BIT : 0);
 
-  const bool rNow = btn.r;
-  const bool yNow = btn.y;
-  const bool gNow = btn.g;
+  stateChanged = (newStateMask != colorStateMask);
+  colorStateMask = newStateMask;
 
-  const uint8_t red = boolToByte(rNow);
-  const uint8_t yellow = boolToByte(yNow);
-  const uint8_t green = boolToByte(gNow);
-
-  stateChanged = (rNow != lastR) || (yNow != lastY) || (gNow != lastG);
-
-  // send led state if changed
-  sendCurrentState(red, yellow, green);
-  if (stateChanged) {
-    sendCommand(red, yellow, green);
-    lastActivity = millis();
-    lastR = rNow;
-    lastY = yNow;
-    lastG = gNow;
-  }
+  sendCurrentState();
 }
 
-// handle button state changes and long-press detection
-void detectButtonChange() {
-  static bool lastR = false;
-  static bool lastY = false;
-  static bool lastG = false;
+// send current led states
+void sendCurrentState() {
+  uint8_t red, green, blue;
+  getColorStates(red, green, blue);
 
-  static unsigned long yPressStart = 0;
-  static bool yLongHandled = false;
-
-  static unsigned long gPressStart = 0;
-  static bool gLongHandled = false;
-
-  btn.rPressed = false;
-  btn.yPressed = false;
-  btn.gPressed = false;
-  btn.yLong = false;
-  btn.gLong = false;
-
-  btn.r = (digitalRead(rButtonPin) == LOW);
-  btn.y = (digitalRead(yButtonPin) == LOW);
-  btn.g = (digitalRead(gButtonPin) == LOW);
-  // printf("Buttons state R:%d Y:%d G:%d\n", btn.r, btn.y, btn.g);m
-
-  updateButtonEvents(btn.r, lastR, btn.rPressed, nullptr, nullptr, nullptr);
-  updateButtonEvents(btn.y, lastY, btn.yPressed, &yPressStart, &yLongHandled, &btn.yLong);
-  updateButtonEvents(btn.g, lastG, btn.gPressed, &gPressStart, &gLongHandled, &btn.gLong);
-}
-
-// send current led state at intervals
-void sendCurrentState(uint8_t red, uint8_t yellow, uint8_t green) {
+  // send periodic updates
   if (millis() - lastSend >= sendInterval) {
     lastSend = millis();
-    sendCommand(red, yellow, green);
+    sendCommand(red, green, blue);
     sendInterval = 500 + random(-50, 51);
+  }
+
+  // send immediate update if state changed
+  if (stateChanged) {
+    printf("State changed to R:%u G:%u B:%u ", red, green, blue);
+    sendCommand(red, green, blue);
   }
 }
 
 // send command frame to receiver
-void sendCommand(uint8_t red, uint8_t yellow, uint8_t green) {
+void sendCommand(uint8_t red, uint8_t green, uint8_t blue) {
+  cyclesElapsed++;
   pulseActivityLed(10);
-  Frame frame = { CONTROLLER_ADDRESS, red, yellow, green, brightnessOptions[brightnessIndex] };
+  Frame frame = { CONTROLLER_ADDRESS, red, green, blue, brightnessOptions[brightnessIndex] };
   sendFrame(frame);
-  // printf("Sent state R:%u Y:%u G:%u\n", red, yellow, green);
+  // printf("Sent state R:%u G:%u B:%u\n", red, green, blue);
 }
 
-// set rgb led color
-void setRgb(uint8_t red, uint8_t green, uint8_t blue) {
-  analogWrite(rPin, red);
-  analogWrite(gPin, green);
-  analogWrite(bPin, blue);
+// display receiver echo states on controller rgb led
+void processEcho() {
+  while (RFSerial.available()) {
+    Frame f;
+    if (readFrame(f)) {
+      if (f.device == RECEIVER_ADDRESS) {
+        if (isValidBoolByte(f.red) && isValidBoolByte(f.green) && isValidBoolByte(f.blue) && !blinking) {
+          // valid frame - update LED
+          updateRGBLED(f.red, f.green, f.blue);
+        } else {
+          // invalid color values (receiver sent error indicator)
+          cyclesElapsed = 0;
+        }
+      }
+    } else {
+      // bad CRC or frame read error
+      cyclesElapsed = 0;
+    }
+  }
+}
+
+// blink purple led when receiver error is detected
+void errorBlink() {
+  // check if an error occured within last 2 cycles
+  
+  if (cyclesElapsed < 2 ) {
+    blinking = true;
+    if ((millis() % 300) < 150) {
+      updateRGBLED(1, 0, 1);
+    } else {
+      updateRGBLED(0, 0, 0);
+    }
+  }
+  else {
+    blinking = false;
+  }
 }
 
 // update rgb led based on receiver state
-void updateRGBLED(uint8_t red, uint8_t yellow, uint8_t green, uint8_t blue) {
-  if (blue) {
-    setRgb(0, 0, 255);
-  } else if (yellow && green) {
-    setRgb(255, 200, 0);
-  } else if (green) {
-    setRgb(0, 255, 0);
-  } else if (yellow) {
-    if (systemMode == 1) {
-      setRgb(255, 100, 0);
-    } else {
-      // systemMode 2/3: map yellow to red
-      setRgb(255, 0, 0);
-    }
-  } else if (red) {
-    setRgb(255, 0, 255);
-  } else {
-    setRgb(0, 0, 0);
-  }
+void updateRGBLED(uint8_t red, uint8_t green, uint8_t blue) {
+  analogWrite(rPin, red ? 1 : 0);
+  analogWrite(gPin, green ? 1 : 0);
+  analogWrite(bPin, blue ? 1 : 0);
 }
