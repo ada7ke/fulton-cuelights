@@ -2,12 +2,10 @@
 #include "controller.h"
 #include "common.h"
 
-// init
-int systemMode = 1;
+int systemMode = 1; // default system mode 1: single color mode
 
 static unsigned long lastSend = 0;
 static unsigned long lastActivity = 0;
-static unsigned long sleepTimer = 5000;
 
 struct ButtonState {
   bool r = false;
@@ -24,7 +22,7 @@ static ButtonState btn;
 
 bool stateChanged = false;
 static constexpr unsigned long longHoldDuration = 3000UL;
-static const uint8_t brightnessOptions[] = { 5, 15, 30 };
+static const uint8_t brightnessOptions[] = { 5, 15, 30 }; // edit values to change brightness presets
 static uint8_t brightnessIndex = 1;
 static constexpr size_t brightnessOptionsCount = sizeof(brightnessOptions) / sizeof(brightnessOptions[0]);
 static constexpr unsigned long mode2ToggleDebounceMs = 200;
@@ -226,6 +224,7 @@ void mode1() {
   } 
 
   // auto-sleep after 5 seconds of no activity
+  int sleepTimer = 5000;
   if (millis() - lastActivity >= sleepTimer && colorStateMask != 0) {
     colorStateMask = 0;
     lastActivity = millis();
@@ -273,7 +272,7 @@ void sendCurrentState() {
   if (millis() - lastSend >= sendInterval) {
     lastSend = millis();
     sendCommand(red, green, blue);
-    sendInterval = 500 + random(-50, 51);
+    sendInterval = 500 + random(-jitter, jitter);
   }
 
   // send immediate update if state changed

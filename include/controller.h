@@ -1,9 +1,15 @@
 #pragma once
 #include "common.h"
 
-constexpr uint8_t rButtonPin = 10;
-constexpr uint8_t bButtonPin = 3;
-constexpr uint8_t gButtonPin = 4;
+// rgb led indicator pins
+#define rPin 2 
+#define gPin 1
+#define bPin 0
+
+// button input pins
+#define rButtonPin 10
+#define bButtonPin 3
+#define gButtonPin 4
 
 void setupController();
 void loopController();

@@ -85,7 +85,7 @@ void sendIntervaledEcho() {
   if (millis() - lastSend >= sendInterval) {
     lastSend = millis();
     sendFrame(lastEcho);
-    sendInterval = 500 + random(-50, 51);
+    sendInterval = 500 + random(-jitter, jitter);
   }
 }
 

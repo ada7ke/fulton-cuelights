@@ -4,12 +4,12 @@ Wireless RGB LED controller system using ESP32-C3 microcontrollers with RF seria
 
 ## Overview
 
-Two-device system: a handheld controller with three buttons and a receiver that controls RGB LEDs. Designed for theater/stage cue lighting applications.
+Two-device system: a handheld controller with three buttons and a receiver that controls RGB LEDs. Designed for theater/stage cueing applications.
 
 ## Hardware
 
-- **Controller**: ESP32-C3 with 3 push buttons (red, blue, green) + RGB LED feedback
-- **Receiver**: ESP32-C3 with 3 PWM-controlled LEDs (red, blue, green)
+- **Controller**: ESP32-C3 with 3 push buttons (red, green, blue) + RGB LED feedback
+- **Receiver**: ESP32-C3 with 3 PWM-controlled LEDs (red, green, blue)
 - **Communication**: RF serial link (433MHz/915MHz modules)
 
 ### Pin Configuration

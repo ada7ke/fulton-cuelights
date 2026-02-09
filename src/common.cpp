@@ -2,6 +2,7 @@
 #include "common.h"
 
 unsigned long sendInterval = 500;
+unsigned long jitter = 50;
 
 // LED activity pulse
 bool activityPulseActive = false;

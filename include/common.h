@@ -2,10 +2,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-#define rPin 2 
-#define gPin 1
-#define bPin 0
-#define LED_PIN 8
+#define LED_PIN 8 // activity led pin
 
 #define RFSerial Serial1
 #define RX_PIN 21 // swap rx and tx pins
@@ -25,6 +22,7 @@ struct Frame {
 };
 
 extern unsigned long sendInterval;
+extern unsigned long jitter;
 
 void pulseActivityLed(uint16_t ms);
 void serviceActivityLed();
