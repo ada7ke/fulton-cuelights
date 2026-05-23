@@ -162,7 +162,7 @@ void blink(int times, int red, int green, int blue) {
 void cycleBrightness() {
   brightnessIndex = (brightnessIndex + 1) % brightnessOptionsCount;
   printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
-  blink(3, 0, 0, 1); // blink blue
+  blink(3, 1, 0, 1);
   stateChanged = true;
   lastActivity = millis();
 }
@@ -171,7 +171,7 @@ void cycleBrightness() {
 void cycleSystemMode() {
   systemMode = (systemMode % 3) + 1;
   printf("System mode changed to: %d\n", systemMode);
-  blink(3, 0, 0, 1); // blink blue
+  blink(3, 1, 0, 1);
   lastActivity = millis();
 }
 
@@ -294,22 +294,17 @@ void processEcho() {
 
       if (f.device == RECEIVER_ADDRESS) {
         if (isValidBoolByte(f.red) && isValidBoolByte(f.green) && isValidBoolByte(f.blue)) {
-          if (f.blue) {
-            updateRGBLED(1, 1, 0);
-          }
-          else {
-            updateRGBLED(f.red, f.green, f.blue);
-          }
+            updateRGBLED(f.blue, f.green, 0);
         } else {
           printf("Receiver sent invalid echo values\n");
-          blink(5, 1, 0, 1);
+          blink(3, 0, 0, 1);
         }
       }
 
     } else if (result == FRAME_ERROR) {
       framesProcessed++;
       printf("Bad echo frame or CRC\n");
-      blink(5, 1, 0, 1);
+      blink(3, 0, 0, 1);
     } else {
       break;  // FRAME_NONE. partial frame, wait for more bytes
     }
