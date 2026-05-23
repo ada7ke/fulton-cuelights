@@ -1,89 +1,140 @@
 #include "receiver.h"
 #include "common.h"
 
-static State state = WAIT_START;
+// pwm settings
+const int freq = 5000;
+const int res = 8;
+static uint8_t brightness = 15;
+const int redChannel = 0;
+const int greenChannel = 1;
+const int blueChannel = 2;
+
+
+
+static unsigned long lastMessage = 0;
+static Frame lastEcho = { RECEIVER_ADDRESS, 0, 0, 0, brightness };
+static unsigned long lastSend = 0;
 
 void setupReceiver()
 {
-  pinMode(redLED, OUTPUT);
-  pinMode(yellowLED, OUTPUT);
-  pinMode(greenLED, OUTPUT);
+  randomSeed(micros());
 
-  updateLEDs('X');
-  digitalWrite(ledPin, HIGH);
+  ledcSetup(redChannel, freq, res);
+  ledcSetup(greenChannel, freq, res);
+  ledcSetup(blueChannel, freq, res);
+
+  ledcAttachPin(redLED, redChannel);
+  ledcAttachPin(greenLED, greenChannel);
+  ledcAttachPin(blueLED, blueChannel);
+
+  pinMode(LED_PIN, OUTPUT);
+
+  updateLEDs(0, 0, 0);
+  digitalWrite(LED_PIN, HIGH);
+
+  lastMessage = millis();
+  lastEcho = { RECEIVER_ADDRESS, 0, 0, 0, brightness };
+  lastSend = 0;
 }
 
 void loopReceiver()
 {
-  static char mode;
-  static char recievedChecksum;
-
-  while (RFSerial.available()) {
-    char c = RFSerial.read();
-    printf("Read: %c\n", c);
-    digitalWrite(ledPin, LOW);
-
-    switch (state) {
-      case WAIT_START:
-        if (c == 0x7E) {
-          state = READ_MODE;
-        }
-        break;
-
-      case READ_MODE:
-        mode = c;
-        state = READ_CHECKSUM;
-        break;
-
-      case READ_CHECKSUM:
-        recievedChecksum = c;
-        state = WAIT_END;
-        break;
-
-      case WAIT_END:
-        if (c == 0x7F) {
-          uint8_t data[1] = { static_cast<uint8_t>(mode) };
-          uint8_t expectedCRC = crc8(data, 1); 
-
-          if (static_cast<uint8_t>(recievedChecksum) == expectedCRC) {
-            printf("Command: %c\n", mode);
-            updateLEDs(mode);
-          }
-          else {
-            mode = 'Z';
-          }
-
-          RFSerial.write(mode);
-
-          state = WAIT_START;
-        }
-    }
-    delay(10);
-  } 
-
-  digitalWrite(ledPin, HIGH);
-  delay(100);
+  serviceActivityLed();
+  
+  processCommand();
+  sendIntervaledEcho();
+  timeoutReceiver();
 }
 
-void updateLEDs(char c) {
-  if (c == 'R') {
-    analogWrite(redLED, 20);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
+// process incoming command frames
+void processCommand() {
+  int framesProcessed = 0;
+
+  while (RFSerial.available() && framesProcessed < 3) {
+    Frame f;
+    ReadFrameResult result = readFrame(f);
+
+    if (result == FRAME_OK) {
+      framesProcessed++;
+
+      printf("RX frame dev:%u R:%u G:%u B:%u brightness:%u\n",
+             f.device, f.red, f.green, f.blue, f.brightness);
+        
+      if (f.device == CONTROLLER_ADDRESS) {
+        if (isValidBoolByte(f.red) && isValidBoolByte(f.green) && isValidBoolByte(f.blue)) {
+          // valid frame - update leds and send echo
+          pulseActivityLed(10);
+          lastMessage = millis();
+          brightness = f.brightness;
+          updateLEDs(f.red, f.green, f.blue);
+          // send echo only if state changed
+          // if (lastEcho.red != f.red || lastEcho.green != f.green || lastEcho.blue != f.blue || lastEcho.brightness != brightness) {
+          //   lastEcho = { RECEIVER_ADDRESS, f.red, f.green, f.blue, brightness };
+          //   sendFrame(lastEcho);
+          // }
+          lastEcho = { RECEIVER_ADDRESS, f.red, f.green, f.blue, brightness };
+          sendFrame(lastEcho);
+        } else {
+          // send error frame with invalid values (2 = error indicator)
+          printf("Invalid command values R:%u G:%u B:%u brightness:%u\n",
+                 f.red, f.green, f.blue, f.brightness);
+          // Frame errorFrame = { RECEIVER_ADDRESS, 2, 2, 2, brightness };
+          // sendFrame(errorFrame);
+        }
+      } else {
+        printf("Ignoring frame for device:%u\n", f.device);
+      }
+    } else if (result == FRAME_ERROR) {
+      framesProcessed++;
+      // send error frame on CRC/read failure
+      printf("Error: Failed to read frame\n");
+      // Frame errorFrame = { RECEIVER_ADDRESS, 2, 2, 2, brightness };
+      // sendFrame(errorFrame);
+    } else {
+      // no complete frame available
+      break;
+    }
   }
-  else if (c == 'Y') {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 20);
-    analogWrite(greenLED, 0);
+}
+
+// send echo at intervals
+void sendIntervaledEcho() {
+  if (millis() - lastSend >= sendInterval) {
+    lastSend = millis();
+
+    printf("TX echo dev:%u R:%u G:%u B:%u brightness:%u\n",
+           lastEcho.device, lastEcho.red, lastEcho.green, lastEcho.blue, lastEcho.brightness);
+
+    sendFrame(lastEcho);
+    sendInterval = 500 + random(-jitter, jitter);
   }
-  else if (c == 'G') {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 20);
+}
+
+// no message timeout
+void timeoutReceiver() {
+  if (millis() - lastMessage > 5000) {
+    lastMessage = millis();
+    updateLEDs(0, 0, 0);
+
+    lastEcho = { RECEIVER_ADDRESS, 0, 0, 0, brightness };
+    sendFrame(lastEcho);
+
+    printf("No message timeout, turning off LEDs\n");
   }
-  else if (c == 'X') {
-    analogWrite(redLED, 0);
-    analogWrite(yellowLED, 0);
-    analogWrite(greenLED, 0);
-  }
+}
+
+// update led states
+void updateLEDs(uint8_t red, uint8_t green, uint8_t blue) {
+  auto setLEDs = [](uint8_t r, uint8_t g, uint8_t b) {
+    ledcWrite(redChannel, r);
+    ledcWrite(greenChannel, g);
+    ledcWrite(blueChannel, b);
+  };
+
+  uint8_t r = red ? brightness : 0;
+  uint8_t g = green ? brightness : 0;
+  uint8_t b = blue ? brightness : 0;
+
+  setLEDs(r, g, b);
+  printf("Updated LEDs - Brightness: %u | R: %u, G: %u, B: %u\n", brightness, r, g, b);
 }

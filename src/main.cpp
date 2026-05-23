@@ -2,19 +2,17 @@
 #include "receiver.h"
 #include "controller.h"
 #include "common.h"
+//#include "WifiAP.hpp"
 
+// detect device based on pin state
 #define ROLE_DETECT_PIN 5
-
 enum DeviceRole {
   ROLE_CONTROLLER,
   ROLE_RECEIVER
 };
-
 DeviceRole deviceRole;
-
 DeviceRole autoDetectRole() {
   pinMode(ROLE_DETECT_PIN, INPUT_PULLUP);
-  delay(10); 
 
   if (digitalRead(ROLE_DETECT_PIN) == LOW) {
     return ROLE_CONTROLLER;
@@ -27,30 +25,43 @@ void setup()
 {
   Serial.begin(115200);
   delay(1000);
+  Serial.flush();
+
+  // uncomment to enable ota
+  // setup_wifi();
 
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
   pinMode(bPin, OUTPUT);
-  pinMode(ledPin, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
+  // detect device type
   deviceRole = autoDetectRole();
   if (deviceRole == ROLE_CONTROLLER) {
-    // Begin RF Serial on Serial1 (UART)
-    RFSerial.begin(9600, SERIAL_8N1, 20, 21);
-    Serial.println("Auto detected role: CONTROLLER");
+    RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
+    delay(10);
+    printf("Auto detected role: CONTROLLER\n");
     setupController();
   } else {
-    RFSerial.begin(9600, SERIAL_8N1, 21, 20);
-    Serial.println("Auto detected role: RECEIVER");
+    RFSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN); 
+    delay(10);
+    printf("Auto detected role: RECEIVER\n");
     setupReceiver();
   }
 }
 
 void loop()
 {
+  // uncomment to enable ota
+  // ArduinoOTA.handle();
+  // ElegantOTA.loop();
+  // dnsServer.processNextRequest();
+  // printf("Running loop for role: %s\n", deviceRole == ROLE_CONTROLLER ? "CONTROLLER" : "RECEIVER");
+  // run loop according to device type
   if (deviceRole == ROLE_CONTROLLER) {
     loopController();
   } else {
     loopReceiver();
   }
+  delay(5);
 }

@@ -2,12 +2,38 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-#define rPin 2 
-#define gPin 1
-#define bPin 0
-#define ledPin 8
+#define LED_PIN 8 // activity led pin
 
 #define RFSerial Serial1
+#define RX_PIN 21 // swap rx and tx pins
+#define TX_PIN 20 // swap rx and tx pins
 
-void updateRGBLED(char mode);
+#define FRAME_START 0x7E
+#define FRAME_END 0x7F
+#define CONTROLLER_ADDRESS 0x01
+#define RECEIVER_ADDRESS 0x02
+
+struct Frame {
+  uint8_t device;
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+  uint8_t brightness;
+};
+
+enum ReadFrameResult {
+  FRAME_NONE,
+  FRAME_OK,
+  FRAME_ERROR
+};
+
+extern unsigned long sendInterval;
+extern unsigned long jitter;
+
+void pulseActivityLed(uint16_t ms);
+void serviceActivityLed();
+
+inline bool isValidBoolByte(uint8_t byte) { return (byte == 0 || byte == 1); }
 uint8_t crc8(const uint8_t* data, size_t len);
+void sendFrame(const Frame& frame);
+ReadFrameResult readFrame(Frame &out);

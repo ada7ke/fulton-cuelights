@@ -1,19 +1,36 @@
 #pragma once
+#include "common.h"
 
-#define rButtonPin 6
-#define yButtonPin 3
+// rgb led indicator pins
+#define rPin 2 
+#define gPin 1
+#define bPin 0
+
+// button input pins
+#define rButtonPin 10
+#define bButtonPin 3
 #define gButtonPin 4
-
-enum SwitchMode
-{
-  EMPTY,
-  R,
-  Y,
-  G,
-};
 
 void setupController();
 void loopController();
+
+void cycleBrightness();
+void cycleSystemMode();
+void handleControllerShortcuts();
+void runSystemMode();
+void processEcho();
+void errorBlink();
+void modeBlink(int times);
+
+bool toggleColorBit(bool &pressedFlag, unsigned long &lockoutUntil, uint8_t bitMask);
+void updateButtonEvents(bool now, bool &last, 
+						bool &pressedEvent, unsigned long *pressStart, 
+						bool *longHandled, bool *longEvent);
+
+void mode1();
+void mode2();
+void mode3();
 void detectButtonChange();
-void sendCurrentMode(char mode);
-void sendCommand(char mode);
+void sendCurrentState();
+void sendCommand(uint8_t red, uint8_t green, uint8_t blue);
+void updateRGBLED(uint8_t red, uint8_t green, uint8_t blue);
