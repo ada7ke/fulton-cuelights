@@ -51,22 +51,11 @@ void setupController() {
 }
 
 void loopController() {
-  //printf("A serviceActivityLed; ");
   serviceActivityLed();
-
-  //printf("B detectButtonChange; ");
   detectButtonChange();
-
-  //printf("C handleControllerShortcuts; ");
   handleControllerShortcuts();
-
-  //printf("D runSystemMode; ");
   runSystemMode();
-
-  //printf("E processEcho; ");
   processEcho();
-
-  //printf("G loopController done; ");
 }
 
 // toggle color bit with debounce
@@ -162,7 +151,7 @@ void blink(int times, int red, int green, int blue) {
 void cycleBrightness() {
   brightnessIndex = (brightnessIndex + 1) % brightnessOptionsCount;
   printf("Brightness level changed to: %u\n", brightnessOptions[brightnessIndex]);
-  blink(3, 1, 0, 1);
+  blink(brightnessIndex, 1, 0, 1);
   stateChanged = true;
   lastActivity = millis();
 }
@@ -171,7 +160,7 @@ void cycleBrightness() {
 void cycleSystemMode() {
   systemMode = (systemMode % 3) + 1;
   printf("System mode changed to: %d\n", systemMode);
-  blink(3, 1, 0, 1);
+  blink(systemMode, 1, 0, 1);
   lastActivity = millis();
 }
 
@@ -213,7 +202,7 @@ void mode1() {
 
   // auto-sleep after 5 seconds of no activity
   int sleepTimer = 5000;
-  if (millis() - lastActivity >= sleepTimer && colorStateMask != 0) {
+  if (millis() - lastActivity >= sleepTimer && colorStateMask == GREEN_BIT) {
     colorStateMask = 0;
     lastActivity = millis();
   }
